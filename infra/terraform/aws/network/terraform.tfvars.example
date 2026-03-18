@@ -24,10 +24,6 @@ private_db_subnet_cidrs = [
   "10.0.21.0/24",
 ]
 
-allowed_ssh_cidrs = [
-  "203.0.113.10/32",
-]
-
 enable_multi_nat = false
 
 tags = {

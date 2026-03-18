@@ -2,12 +2,12 @@
 
 ## Summary
 
-이 프로젝트는 차량 시뮬레이터가 생성한 이벤트를 멀티클라우드 환경에서 수집/정제하고, AWS 퍼블릭 클라우드에서 대시보드 서비스로 제공하는 구조를 목표로 합니다.
+The project collects and refines vehicle data in a multi-cloud environment, then serves dashboard workloads from AWS.
 
-- 상류 데이터 처리 구간: Azure 기반 데이터 수집/처리 영역
-- 서비스 제공 구간: AWS VPC 기반 대시보드/데이터 서빙 영역
-- 조회 기준: 대시보드는 S3가 아니라 RDS serving table만 조회
-- 반영 방식: 1~5분 단위 마이크로배치 near-real-time
+- Upstream data processing zone: Azure-based collection and processing area
+- Service delivery zone: AWS VPC-based dashboard and serving area
+- Query principle: dashboards read RDS serving tables, not S3 directly
+- Refresh model: near-real-time micro-batch updates every 1 to 5 minutes
 
 ## Current Target Architecture
 
@@ -25,48 +25,50 @@ flowchart LR
 
 ## AWS Public Cloud Scope
 
-- 인터넷 진입점은 `ALB` 단일화
-- `WAF -> ALB` 구조를 목표로 하지만, WAF는 현재 Phase 1 구현 범위에서 보류
-- 서비스 워크로드는 `Private App Subnet`
-- RDS는 `Private DB Subnet`
-- S3 연동은 `Gateway Endpoint` 우선
-- 운영자 접근은 `Bastion Host + 허용된 관리자 IP` 기준
-- K3s는 `1 master + 3 worker` 초안 기준으로 설계
-- NAT Gateway는 비용 절감을 위해 1대만 사용
+- External entry point is `ALB`
+- Target direction is `WAF -> ALB`, but WAF is deferred in Phase 1
+- Service workloads run in `Private App Subnets`
+- RDS runs in `Private DB Subnets`
+- S3 access uses a `Gateway VPC Endpoint`
+- Operational access uses `SSM Session Manager`, not a bastion host
+- K3s baseline is `1 master + 3 workers`
+- NAT Gateway count is fixed at `1` for the current cost-sensitive baseline
 
 ## Phase 1 AWS Placement
 
-- `Public-A`: ALB, NAT Gateway, Bastion Host
+- `Public-A`: ALB, NAT Gateway
 - `Public-C`: ALB
 - `Private-App-A`: K3s master 1, worker 1
-- `Private-App-C`: worker 2대
-- `Private-DB-A/C`: 단일 RDS 인스턴스를 위한 DB Subnet Group
-- `S3 Gateway Endpoint`: Private Route Table과 연결
-- `RDS`: 인스턴스는 1대만 생성, DB Subnet은 2개 준비
+- `Private-App-C`: worker 2 nodes
+- `Private-DB-A/C`: DB subnet group for a single RDS instance
+- `S3 Gateway Endpoint`: attached to private route tables
+- `RDS`: one instance, with two DB subnets prepared
+- `Operations`: SSM Session Manager through instance IAM role and outbound connectivity
 
 ## AWS Network Baseline
 
 - Region: `ap-northeast-2`
-- AZ: `2개`
-- Subnet 구성:
-  - Public 2개
-  - Private App 2개
-  - Private DB 2개
-- Route 기준:
+- AZ count: `2`
+- Subnet layout:
+  - Public x 2
+  - Private App x 2
+  - Private DB x 2
+- Routing baseline:
   - Public -> IGW
   - Private App -> NAT Gateway
-  - Private DB -> 내부 통신 전용
+  - Private DB -> local only
 
 ## Ownership Boundary
 
-- 인프라 1: VPC, Subnet, Route, NAT, S3 Endpoint, SG, ALB
-- 인프라 2: EC2, Launch Template, ASG, K3s, Linkerd, Ansible
-- 인프라 3: S3, RDS, DB Subnet Group, import 흐름
-- 인프라 4: Dashboard 배포, GitHub Actions, 헬스체크
+- Infra 1: VPC, Subnet, Route, NAT, S3 Endpoint, SG, ALB
+- Infra 2: EC2, Launch Template, ASG, K3s, Linkerd, Ansible, SSM-ready instance role
+- Infra 3: S3, RDS, DB Subnet Group, import flow
+- Infra 4: Dashboard deployment, GitHub Actions, service health check
 
 ## Open Items
 
-- Azure 처리 구간 상세 리소스와 네트워크 연결 방식
-- WAF 적용 시점과 규칙 초안
-- RDS import 파일 포맷 최종 결정
-- ALB Listener/Target Group/Ingress 규칙 확정
+- Detailed Azure-side resource design and connectivity
+- WAF timing and rule definition
+- Final RDS import file format
+- ALB listener, target group, and ingress details
+- Whether to add private VPC endpoints for `ssm`, `ssmmessages`, and `ec2messages` in a later phase

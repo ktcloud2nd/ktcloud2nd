@@ -60,12 +60,6 @@ variable "private_db_subnet_cidrs" {
   }
 }
 
-variable "allowed_ssh_cidrs" {
-  description = "Allowed public CIDRs for bastion SSH access."
-  type        = list(string)
-  default     = ["203.0.113.10/32"]
-}
-
 variable "enable_multi_nat" {
   description = "Create one NAT gateway per AZ. False means a single NAT in the first public subnet."
   type        = bool

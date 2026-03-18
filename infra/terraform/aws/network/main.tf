@@ -197,32 +197,6 @@ resource "aws_security_group" "alb" {
   }
 }
 
-resource "aws_security_group" "bastion" {
-  name        = "${var.name_prefix}-bastion-sg"
-  description = "Security group for bastion host access."
-  vpc_id      = aws_vpc.this.id
-
-  ingress {
-    description = "Allow SSH from approved admin IPs"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ssh_cidrs
-  }
-
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.name_prefix}-bastion-sg"
-  }
-}
-
 resource "aws_security_group" "k3s_nodes" {
   name        = "${var.name_prefix}-k3s-nodes-sg"
   description = "Security group for K3s control plane and worker nodes."
@@ -234,14 +208,6 @@ resource "aws_security_group" "k3s_nodes" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = [var.vpc_cidr]
-  }
-
-  ingress {
-    description     = "Allow SSH from bastion"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.bastion.id]
   }
 
   ingress {

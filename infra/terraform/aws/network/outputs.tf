@@ -58,11 +58,6 @@ output "alb_sg_id" {
   value       = aws_security_group.alb.id
 }
 
-output "bastion_sg_id" {
-  description = "Bastion security group identifier."
-  value       = aws_security_group.bastion.id
-}
-
 output "k3s_nodes_sg_id" {
   description = "K3s nodes security group identifier."
   value       = aws_security_group.k3s_nodes.id
@@ -77,7 +72,6 @@ output "security_group_ids" {
   description = "Core security group identifiers."
   value = {
     alb       = aws_security_group.alb.id
-    bastion   = aws_security_group.bastion.id
     k3s_nodes = aws_security_group.k3s_nodes.id
     db        = aws_security_group.db.id
   }
