@@ -1,77 +1,104 @@
-# 1. 네트워크 정보 가져오기
-data "terraform_remote_state" "network" {
-  backend = "local"
-  config = {
-    path = "../network/terraform.tfstate"
-  }
-}
-
-# 2. 공통 설정 (로컬 변수)
 locals {
   ami_id        = "ami-084a56dceed3eb9bb"
   instance_type = "t3.small"
   name_prefix   = "8team"
   key_name      = "8team-key"
-  
-  # 서브넷 ID 매핑 (팀원의 Output 이름에 따라 인덱스를 확인하세요)
-  # index[0] = App-A (운영자용), index[1] = App-C (사용자용)
-  op_subnet_id   = data.terraform_remote_state.network.outputs.private_app_subnet_ids[0]
-  user_subnet_id = data.terraform_remote_state.network.outputs.private_app_subnet_ids[1]
-  
-  k3s_sg_id      = data.terraform_remote_state.network.outputs.security_group_ids.k3s_nodes
+
+  # 마스터/워커 공용 단일 프라이빗 서브넷 (AZ별)
+  private_subnet_a = data.terraform_remote_state.network.outputs.private_subnet_ids[0]
+  private_subnet_c = data.terraform_remote_state.network.outputs.private_subnet_ids[1]
+
+  k3s_sg_id = data.terraform_remote_state.network.outputs.security_group_ids.k3s_nodes
 }
 
-# 3. K3s Master Node (운영자용 서브넷 App-A 배치)
-resource "aws_instance" "k3s_master" {
-  ami           = local.ami_id
-  instance_type = local.instance_type
-  key_name      = local.key_name
-  subnet_id     = local.op_subnet_id
+# ──────────────────────────────────────────
+# [1] Internal NLB (마스터 API 서버용)
+# ──────────────────────────────────────────
+resource "aws_lb" "k3s_nlb" {
+  name               = "${local.name_prefix}-k3s-nlb"
+  internal           = true
+  load_balancer_type = "network"
+  subnets            = [local.private_subnet_a, local.private_subnet_c]
+}
+
+resource "aws_lb_target_group" "k3s_api_tg" {
+  name     = "${local.name_prefix}-k3s-api-tg"
+  port     = 6443
+  protocol = "TCP"
+  vpc_id   = data.terraform_remote_state.network.outputs.vpc_id
+
+  health_check {
+    protocol = "TCP"
+    port     = "6443"
+    interval = 10
+  }
+}
+
+resource "aws_lb_listener" "k3s_api_listener" {
+  load_balancer_arn = aws_lb.k3s_nlb.arn
+  port              = 6443
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.k3s_api_tg.arn
+  }
+}
+
+# ──────────────────────────────────────────
+# [2] 고정 마스터 노드 (AZ-A / AZ-C 각 1대)
+# ──────────────────────────────────────────
+resource "aws_instance" "k3s_master_a" {
+  ami                    = local.ami_id
+  instance_type          = local.instance_type
+  key_name               = local.key_name
+  subnet_id              = local.private_subnet_a
   vpc_security_group_ids = [local.k3s_sg_id]
-  private_ip             = "10.0.1.10"  # 운영자용 서브넷 CIDR 대역에 맞춰서 입력해야함 
-  iam_instance_profile = aws_iam_instance_profile.k3s_node_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.k3s_node_profile.name
+
+  # 프라이빗 서브넷 CIDR 범위 내에서 고정 IP 지정
+  # 예) 서브넷이 10.0.1.0/24 이면 10.0.1.x 범위 내에서 선택
+  private_ip = var.master_a_private_ip
 
   tags = {
-    Name = "${local.name_prefix}-k3s-master"
+    Name = "${local.name_prefix}-master-a"
     Role = "master"
   }
 }
 
-# 4. 운영자용 워커 노드 (운영자용 서브넷 App-A 배치 / 고정 1대)
-resource "aws_instance" "k3s_worker_op" {
-  ami           = local.ami_id
-  instance_type = local.instance_type
-  key_name      = local.key_name
-  subnet_id     = local.op_subnet_id
+resource "aws_instance" "k3s_master_c" {
+  ami                    = local.ami_id
+  instance_type          = local.instance_type
+  key_name               = local.key_name
+  subnet_id              = local.private_subnet_c
   vpc_security_group_ids = [local.k3s_sg_id]
-  private_ip             = "10.0.1.11"
-  iam_instance_profile = aws_iam_instance_profile.k3s_node_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.k3s_node_profile.name
+
+  # AZ-C 서브넷 CIDR 범위 내에서 고정 IP 지정
+  private_ip = var.master_c_private_ip
 
   tags = {
-    Name = "${local.name_prefix}-k3s-worker-op"
-    Role = "worker-operator"
+    Name = "${local.name_prefix}-master-c"
+    Role = "master"
   }
 }
 
-# 5. 사용자용 고정 워커 노드 (사용자용 서브넷 App-C 배치 / 고정 1대)
-resource "aws_instance" "k3s_worker_user_fixed" {
-  ami           = local.ami_id
-  instance_type = local.instance_type
-  key_name      = local.key_name
-  subnet_id     = local.user_subnet_id
-  vpc_security_group_ids = [local.k3s_sg_id]
-  private_ip             = "10.0.2.10"
-  iam_instance_profile = aws_iam_instance_profile.k3s_node_profile.name
-  
-  tags = {
-    Name = "${local.name_prefix}-k3s-worker-user-fixed"
-    Role = "worker-user"
-  }
+resource "aws_lb_target_group_attachment" "master_a" {
+  target_group_arn = aws_lb_target_group.k3s_api_tg.arn
+  target_id        = aws_instance.k3s_master_a.id
 }
 
-# 6. 사용자용 ASG 워커 (사용자용 서브넷 App-C 배치 / 유동적)
+resource "aws_lb_target_group_attachment" "master_c" {
+  target_group_arn = aws_lb_target_group.k3s_api_tg.arn
+  target_id        = aws_instance.k3s_master_c.id
+}
+
+# ──────────────────────────────────────────
+# [3] Launch Template - 사용자용 워커
+# ASG 인스턴스는 기동 시 user_data로 자동 클러스터 조인
+# ──────────────────────────────────────────
 resource "aws_launch_template" "k3s_worker_user_lt" {
-  name_prefix   = "${local.name_prefix}-user-worker-lt-"
+  name_prefix   = "${local.name_prefix}-worker-user-"
   image_id      = local.ami_id
   instance_type = local.instance_type
   key_name      = local.key_name
@@ -81,61 +108,125 @@ resource "aws_launch_template" "k3s_worker_user_lt" {
   }
 
   vpc_security_group_ids = [local.k3s_sg_id]
-  
+
+  # 인스턴스 기동 시 K3s agent 자동 설치 및 클러스터 조인
   user_data = base64encode(<<-EOF
     #!/bin/bash
-    # 마스터 노드의 Private IP를 참조하여 자동으로 조인합니다.
     curl -sfL https://get.k3s.io | \
-    K3S_URL="https://${aws_instance.k3s_master.private_ip}:6443" \
-    K3S_TOKEN="${var.k3s_shared_token}" \
-    sh -
-    EOF
+      K3S_URL=https://${aws_lb.k3s_nlb.dns_name}:6443 \
+      K3S_TOKEN="${var.k3s_shared_token}" \
+      sh -s - agent \
+        --node-taint nodetype=user:NoSchedule \
+        --node-label role=user-worker
+  EOF
   )
 
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name = "${local.name_prefix}-k3s-worker-user-asg"
-      Role = "worker-user-asg"
+      Name = "${local.name_prefix}-worker-user"
+      Role = "user"
     }
   }
 }
 
-resource "aws_autoscaling_group" "k3s_worker_user_asg" {
-  name                = "${local.name_prefix}-k3s-worker-user-asg"
-  desired_capacity    = 1
-  max_size            = 3
-  min_size            = 1
+# ──────────────────────────────────────────
+# [4] Launch Template - 운영자용 워커
+# ──────────────────────────────────────────
+resource "aws_launch_template" "k3s_worker_op_lt" {
+  name_prefix   = "${local.name_prefix}-worker-op-"
+  image_id      = local.ami_id
+  instance_type = local.instance_type
+  key_name      = local.key_name
 
-  health_check_type         = "EC2"  # EC2 자체 상태를 기준으로 교체 여부 판단 
-  health_check_grace_period = 180    # 초기 부팅 및 K3s 설치 시간을 벌어줌 (3분)
-  depends_on = [aws_instance.k3s_master] #마스터 생성 후 동작하도록
+  iam_instance_profile {
+    name = aws_iam_instance_profile.k3s_node_profile.name
+  }
 
-  vpc_zone_identifier = [local.user_subnet_id]
+  vpc_security_group_ids = [local.k3s_sg_id]
+
+  user_data = base64encode(<<-EOF
+    #!/bin/bash
+    curl -sfL https://get.k3s.io | \
+      K3S_URL=https://${aws_lb.k3s_nlb.dns_name}:6443 \
+      K3S_TOKEN="${var.k3s_shared_token}" \
+      sh -s - agent \
+        --node-taint nodetype=operator:NoSchedule \
+        --node-label role=operator-worker
+  EOF
+  )
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = "${local.name_prefix}-worker-op"
+      Role = "operator"
+    }
+  }
+}
+
+# ──────────────────────────────────────────
+# [5] ASG - 사용자용 워커
+# desired=2 → AZ-A·AZ-C 각 1대로 자동 분산
+# ──────────────────────────────────────────
+resource "aws_autoscaling_group" "worker_user_asg" {
+  name                = "${local.name_prefix}-worker-user-asg"
+  desired_capacity    = 2
+  min_size            = 2
+  max_size            = 6
+  vpc_zone_identifier = [local.private_subnet_a, local.private_subnet_c]
 
   launch_template {
     id      = aws_launch_template.k3s_worker_user_lt.id
     version = "$Latest"
   }
 
-  # --- 여기부터 Cluster Autoscaler 연동 태그 시작 ---
-
+  tag {
+    key                 = "Name"
+    value               = "${local.name_prefix}-worker-user"
+    propagate_at_launch = true
+  }
   tag {
     key                 = "k8s.io/cluster-autoscaler/enabled"
     value               = "true"
-    propagate_at_launch = true # 이 태그를 생성되는 EC2 인스턴스에도 복사함
+    propagate_at_launch = true
   }
-
   tag {
-    # var.cluster_name이 "8team-cluster"라면 k8s.io/cluster-autoscaler/8team-cluster 가 됩니다.
     key                 = "k8s.io/cluster-autoscaler/${var.cluster_name}"
     value               = "owned"
     propagate_at_launch = true
   }
+}
+
+# ──────────────────────────────────────────
+# [6] ASG - 운영자용 워커
+# desired=2 → AZ-A·AZ-C 각 1대로 자동 분산
+# ──────────────────────────────────────────
+resource "aws_autoscaling_group" "worker_op_asg" {
+  name                = "${local.name_prefix}-worker-op-asg"
+  desired_capacity    = 2
+  min_size            = 2
+  max_size            = 4
+  vpc_zone_identifier = [local.private_subnet_a, local.private_subnet_c]
+
+  launch_template {
+    id      = aws_launch_template.k3s_worker_op_lt.id
+    version = "$Latest"
+  }
 
   tag {
     key                 = "Name"
-    value               = "${local.name_prefix}-k3s-worker-user-asg"
+    value               = "${local.name_prefix}-worker-op"
+    propagate_at_launch = true
+  }
+  tag {
+    key                 = "k8s.io/cluster-autoscaler/enabled"
+    value               = "true"
+    propagate_at_launch = true
+  }
+  tag {
+    key                 = "k8s.io/cluster-autoscaler/${var.cluster_name}"
+    value               = "owned"
     propagate_at_launch = true
   }
 }
