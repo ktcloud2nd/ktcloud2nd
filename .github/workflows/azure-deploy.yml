@@ -1,0 +1,52 @@
+name: 'Azure Infrastructure Deploy'
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '실행할 작업을 선택하세요 (apply: 생성 / destroy: 삭제)'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+        - apply
+        - destroy # 비용 절감 위함 (실무에선 사용 안함)
+
+env:
+  # Azure에 로그인하기 위한 인증 정보
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+  # variables.tf로 밀어 넣을 비밀 정보
+  TF_VAR_public_key: ${{ secrets.AZURE_PUBLIC_KEY }}
+  TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+jobs:
+  terraform-azure:
+    name: 'Terraform Azure'
+    runs-on: ubuntu-latest
+
+    # 모든 run 명령어는 azure 폴더 안에서만 실행
+    defaults:
+      run:
+        working-directory: infra/terraform/azure
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Apply
+      if: ${{ github.event.inputs.action == 'apply' }}
+      run: terraform apply -auto-approve
+
+    - name: Terraform Destroy
+      if: ${{ github.event.inputs.action == 'destroy' }}
+      run: terraform destroy -auto-approve
