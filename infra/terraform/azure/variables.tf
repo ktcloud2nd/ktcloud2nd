@@ -7,7 +7,7 @@ variable "region" {
 variable "vm_size" {
   description = "VM Size"
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_B2ts_v2"
 }
 
 variable "vm_image" {
@@ -16,7 +16,7 @@ variable "vm_image" {
   default = {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts"
+    sku       = "22_04-lts-gen2"
     version   = "latest"
   }
 }
