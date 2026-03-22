@@ -10,7 +10,7 @@ on:
         type: choice
         options:
         - apply
-        - destroy # 비용 절감 위함 (실무에선 사용 안함)
+        - destroy
 
 env:
   # Azure에 로그인하기 위한 인증 정보
@@ -28,10 +28,9 @@ jobs:
     name: 'Terraform Azure'
     runs-on: ubuntu-latest
 
-    # 모든 run 명령어는 azure 폴더 안에서만 실행
     defaults:
       run:
-        working-directory: infra/terraform/azure
+        working-directory: infra/azure/terraform
 
     steps:
     - name: Checkout code
@@ -46,6 +45,46 @@ jobs:
     - name: Terraform Apply
       if: ${{ github.event.inputs.action == 'apply' }}
       run: terraform apply -auto-approve
+
+    # Terraform Output을 Inventory 파일로 변환
+    - name: Generate Ansible Inventory
+      if: ${{ github.event.inputs.action == 'apply' }}
+      run: |
+        BROKER_IP=$(terraform output -raw broker_public_ip)
+        CONSUMER_IP=$(terraform output -raw consumer_public_ip)
+        VM_USER=$(terraform output -raw admin_username)
+        
+        # Terraform 폴더 안에 파일 생성 (Terraform이 준 IP 정보를 즉시 사용 위함)
+        cat <<EOF > azure_hosts.ini
+        [azure_broker]
+        broker-vm ansible_host=${BROKER_IP}
+
+        [azure_consumer]
+        consumer-vm ansible_host=${CONSUMER_IP}
+
+        [azure_vms:children]
+        azure_broker
+        azure_consumer
+
+        [azure_vms:vars]
+        ansible_user=${VM_USER}
+        ansible_python_interpreter=/usr/bin/python3
+        EOF
+
+    # SSH 키 설정 (접속용)
+    - name: Set up SSH Key
+      if: ${{ github.event.inputs.action == 'apply' }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AZURE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa # 보안 강화
+
+    # Ansible 실행
+    - name: Run Ansible Playbook
+      if: ${{ github.event.inputs.action == 'apply' }}
+      run: |
+        ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
+          -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
 
     - name: Terraform Destroy
       if: ${{ github.event.inputs.action == 'destroy' }}
