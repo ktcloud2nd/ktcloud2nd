@@ -1,0 +1,77 @@
+name: destroy-aws-all
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: destroy-aws-all
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_VERSION: '1.8.5'
+  TF_VAR_network_state_path: ../network/terraform.tfstate
+
+jobs:
+  destroy-all:
+    name: Destroy AWS All
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Prepare compute tfvars from example
+        working-directory: infra/terraform/aws/compute
+        shell: bash
+        run: |
+          cp terraform.tfvars.example terraform.tfvars
+          sed -i 's|^k3s_shared_token *=.*|k3s_shared_token = "${{ secrets.K3S_TOKEN }}"|' terraform.tfvars
+
+      - name: Prepare data tfvars from example
+        working-directory: infra/terraform/aws/data
+        shell: bash
+        run: |
+          cp terraform.tfvars.example terraform.tfvars
+
+      # COMPUTE DESTROY
+      - name: Compute Init
+        working-directory: infra/terraform/aws/compute
+        run: terraform init -input=false
+
+      - name: Compute Destroy
+        working-directory: infra/terraform/aws/compute
+        run: terraform destroy -input=false -auto-approve
+
+      # DATA DESTROY
+      - name: Data Init
+        working-directory: infra/terraform/aws/data
+        run: terraform init -input=false
+
+      - name: Data Destroy
+        working-directory: infra/terraform/aws/data
+        run: terraform destroy -input=false -auto-approve
+
+      # NETWORK DESTROY
+      - name: Network Init
+        working-directory: infra/terraform/aws/network
+        run: terraform init -input=false
+
+      - name: Network Destroy
+        working-directory: infra/terraform/aws/network
+        run: terraform destroy -input=false -auto-approve
