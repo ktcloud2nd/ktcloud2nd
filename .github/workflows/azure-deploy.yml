@@ -85,12 +85,15 @@ jobs:
         echo "${{ secrets.AZURE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-    # Ansible 실행
+    # Ansible 실행 (Broker 공인 IP 다시 저장)
     - name: Run Ansible Playbook
       if: ${{ github.event.inputs.action == 'apply' }}
       run: |
+        BROKER_IP=$(terraform output -raw broker_public_ip)
+
         ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
           -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" \
+          -e "broker_public_ip=${BROKER_IP}" \
           -e "aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
           -e "aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
           -e "aws_region=${{ vars.AWS_REGION }}" \

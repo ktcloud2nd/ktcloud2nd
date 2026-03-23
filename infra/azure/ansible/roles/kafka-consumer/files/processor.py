@@ -57,7 +57,7 @@ def process_data(data):
     return data
 
 # 실시간 무한 스트리밍 처리 루프
-print(f"🎧 '{RAW_TOPIC}' 구독 중... 차량 데이터 대기 중...")
+print(f"'{RAW_TOPIC}' 구독 중... 차량 데이터 대기 중...")
 try:
     for message in consumer:
         raw_data = message.value

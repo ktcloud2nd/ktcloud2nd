@@ -3,13 +3,13 @@
   file:
     path: "/home/{{ ansible_user }}/kafka-cluster"
     state: directory
-    mode: '0755'
+    mode: '0777'
 
 - name: 브로커별 데이터 디렉토리 생성
   file:
     path: "/home/{{ ansible_user }}/kafka-cluster/data/kafka{{ item }}"
     state: directory
-    mode: '0755'
+    mode: '0777'
   loop: [1, 2, 3]
 
 - name: Docker Compose 템플릿 배포
@@ -21,6 +21,7 @@
   shell:
     cmd: "docker compose up -d"
     chdir: "/home/{{ ansible_user }}/kafka-cluster"
+  become: yes
 
 - name: Kafka 서비스 안정화 대기
   pause:

@@ -23,6 +23,7 @@
   shell:
     cmd: "docker compose up -d"
     chdir: "/home/{{ ansible_user }}/consumer-app"
+  become: yes
 
 - name: Kafka Connect 서비스 안정화 대기
   pause:
@@ -44,7 +45,7 @@
         azblob.account.name: "{{ azure_storage_account_name }}"
         azblob.account.key: "{{ azure_storage_primary_key }}"
         azblob.container.name: "raw-topic-container"
-        format.class: "io.confluent.connect.azure.blob.storage.format.avro.AvroFormat"
+        format.class: "io.confluent.connect.azure.blob.storage.format.avro.AvroFormat" # 원본 보존용 Avro
         flush.size: "100"
     status_code: [201, 409] # 409는 이미 존재할 경우 무시
 
@@ -64,7 +65,8 @@
         # AWS 인증 정보 (Github Secrets에서 넘어온 변수 활용)
         aws.access.key.id: "{{ aws_access_key }}"
         aws.secret.access.key: "{{ aws_secret_key }}"
-        format.class: "io.confluent.connect.s3.format.json.JsonFormat"
+        format.class: "io.confluent.connect.s3.format.json.JsonFormat" # 분석용 JSONL
+        line.separator: "\n"
         storage.class: "io.confluent.connect.s3.storage.S3Storage"
         flush.size: "100"
     status_code: [201, 409]
