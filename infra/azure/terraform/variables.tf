@@ -7,7 +7,7 @@ variable "region" {
 variable "vm_size" {
   description = "VM Size"
   type        = string
-  default     = "Standard_B2ts_v2"
+  default     = "Standard_B2s_v2"
 }
 
 variable "vm_image" {

@@ -7,6 +7,8 @@ services:
     ports:
       - "{{ 9093 + i }}:{{ 9093 + i }}"
     environment:
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+
       KAFKA_NODE_ID: {{ i }}
       KAFKA_PROCESS_ROLES: 'broker,controller'
       
