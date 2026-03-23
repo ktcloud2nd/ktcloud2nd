@@ -1,4 +1,9 @@
 ---
+- name: "VM DNS 설정 강제 업데이트 (8.8.8.8)"
+  shell: |
+    echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+  become: yes
+
 - name: Consumer 작업용 루트(앱) 디렉토리 생성
   file:
     path: "/home/{{ ansible_user }}/consumer-app/app"
@@ -14,49 +19,23 @@
     - requirements.txt
   ignore_errors: yes
 
-- name: 플러그인 디렉토리 생성
-  file:
-    path: "/home/{{ ansible_user }}/consumer-app/plugins"
-    state: directory
-    mode: '0755'
-
-- name: 압축 해제 도구 설치 (unzip)
-  apt:
-    name: unzip
-    state: present
-  become: yes
-
-- name: Azure Blob 커넥터 다운로드 및 압축 해제
-  unarchive:
-    # Confluent Hub 직접 다운로드 링크
-    src: "https://d1i4a15mxbx7e5.cloudfront.net/plugins/confluentinc-kafka-connect-azure-blob-storage-2.5.3.zip"
-    dest: "/home/{{ ansible_user }}/consumer-app/plugins"
-    remote_src: yes
-    # 실제 압축 풀리는 폴더명 확인 필요
-    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-azure-blob-storage-2.5.3"
-
-- name: S3 커넥터 다운로드 및 압축 해제
-  unarchive:
-    # Confluent Hub 직접 다운로드 링크
-    src: "https://d1i4a15mxbx7e5.cloudfront.net/plugins/confluentinc-kafka-connect-s3-10.5.0.zip"
-    dest: "/home/{{ ansible_user }}/consumer-app/plugins"
-    remote_src: yes
-    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-s3-10.5.0"
-
-- name: Docker Compose 템플릿 배포
+- name: Dockerfile 및 Docker Compose 템플릿 배포
   template:
-    src: docker-compose.yml.j2
-    dest: "/home/{{ ansible_user }}/consumer-app/docker-compose.yml"
+    src: "{{ item.src }}"
+    dest: "/home/{{ ansible_user }}/consumer-app/{{ item.dest }}"
+  loop:
+    - { src: 'Dockerfile.j2', dest: 'Dockerfile' }
+    - { src: 'docker-compose.yml.j2', dest: 'docker-compose.yml' }
 
-- name: Consumer 컨테이너 2개 실행 (Python & Kafka Connect)
+- name: "커스텀 이미지 빌드 및 모든 컨테이너 실행"
   shell:
-    cmd: "docker compose up -d"
+    cmd: "docker compose up -d --build"
     chdir: "/home/{{ ansible_user }}/consumer-app"
   become: yes
 
 - name: Kafka Connect 서비스 안정화 대기
   pause:
-    seconds: 45
+    seconds: 60
     prompt: "Consumer 앱과 Connector가 완전히 뜰 때까지 기다립니다."
 
 - name: "Azure Blob Storage Sink 커넥터 설정 (Raw Data)"

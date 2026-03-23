@@ -14,7 +14,10 @@ services:
       KAFKA_BROKER: "{{ broker_internal_ip }}:9094"
   # Kafka Connect
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.5.0
+    # image: confluentinc/cp-kafka-connect:7.5.0
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: kafka-connect
     ports:
       - "8083:8083"
@@ -46,10 +49,6 @@ services:
       AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
       AWS_REGION: "{{ aws_region }}"
 
-    volumes:
-      # 플러그인을 담을 외부 폴더를 컨테이너 안으로 연결
-      - /home/{{ ansible_user }}/consumer-app/plugins:/usr/share/confluent-hub-components
-    
     command: 
       - bash
       - -c
