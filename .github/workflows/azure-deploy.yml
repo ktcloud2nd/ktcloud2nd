@@ -45,22 +45,24 @@ jobs:
       if: ${{ github.event.inputs.action == 'apply' }}
       run: terraform apply -auto-approve
 
-    # Terraform이 만든 Azure 스토리지 정보를 환경 변수로 추출 (Ansible 전달용)
+    # 스토리지 정보 추출 (jq 사용)
     - name: Get Storage Info from Terraform
       if: ${{ github.event.inputs.action == 'apply' }}
       run: |
-        echo "AZURE_STORAGE_NAME=$(terraform output -raw azure_storage_account_name)" >> $GITHUB_ENV
-        echo "AZURE_STORAGE_KEY=$(terraform output -raw azure_storage_primary_key)" >> $GITHUB_ENV
+        STORAGE_NAME=$(terraform output -json azure_storage_account_name | jq -r .)
+        STORAGE_KEY=$(terraform output -json azure_storage_primary_key | jq -r .)
 
-    # Terraform Output을 Inventory 파일로 변환
+        echo "AZURE_STORAGE_NAME=${STORAGE_NAME}" >> $GITHUB_ENV
+        echo "AZURE_STORAGE_KEY=${STORAGE_KEY}" >> $GITHUB_ENV
+
+    # Inventory 생성
     - name: Generate Ansible Inventory
       if: ${{ github.event.inputs.action == 'apply' }}
       run: |
-        BROKER_IP=$(terraform output -raw broker_public_ip)
-        CONSUMER_IP=$(terraform output -raw consumer_public_ip)
-        VM_USER=$(terraform output -raw admin_username)
+        BROKER_IP=$(terraform output -json broker_public_ip | jq -r .)
+        CONSUMER_IP=$(terraform output -json consumer_public_ip | jq -r .)
+        VM_USER=$(terraform output -json admin_username | jq -r .)
         
-        # Terraform 폴더 안에 파일 생성 (Terraform이 준 IP 정보를 즉시 사용 위함)
         cat <<EOF > azure_hosts.ini
         [azure_broker]
         broker-vm ansible_host=${BROKER_IP}
@@ -77,19 +79,11 @@ jobs:
         ansible_python_interpreter=/usr/bin/python3
         EOF
 
-    # SSH 키 설정 (접속용)
-    - name: Set up SSH Key
-      if: ${{ github.event.inputs.action == 'apply' }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.AZURE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-
-    # Ansible 실행 (Broker 공인 IP 다시 저장)
+    # Ansible 실행
     - name: Run Ansible Playbook
       if: ${{ github.event.inputs.action == 'apply' }}
       run: |
-        BROKER_IP=$(terraform output -raw broker_public_ip)
+        BROKER_IP=$(terraform output -json broker_public_ip | jq -r .)
 
         ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
           -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" \
