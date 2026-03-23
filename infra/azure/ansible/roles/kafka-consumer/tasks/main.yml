@@ -14,6 +14,32 @@
     - requirements.txt
   ignore_errors: yes
 
+- name: 플러그인 디렉토리 생성
+  file:
+    path: "/home/{{ ansible_user }}/consumer-app/plugins"
+    state: directory
+    mode: '0755'
+
+- name: 압축 해제 도구 설치 (unzip)
+  apt:
+    name: unzip
+    state: present
+  become: yes
+
+- name: Azure Blob 커넥터 다운로드 및 압축 해제
+  unarchive:
+    src: "https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-azure-blob-storage/versions/2.5.3/archive"
+    dest: "/home/{{ ansible_user }}/consumer-app/plugins"
+    remote_src: yes
+    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-azure-blob-storage"
+
+- name: S3 커넥터 다운로드 및 압축 해제
+  unarchive:
+    src: "https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-s3/versions/10.5.0/archive"
+    dest: "/home/{{ ansible_user }}/consumer-app/plugins"
+    remote_src: yes
+    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-s3"
+
 - name: Docker Compose 템플릿 배포
   template:
     src: docker-compose.yml.j2

@@ -45,18 +45,22 @@ services:
       AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
       AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
       AWS_REGION: "{{ aws_region }}"
+
+    volumes:
+      # 플러그인을 담을 외부 폴더를 컨테이너 안으로 연결
+      - /home/{{ ansible_user }}/consumer-app/plugins:/usr/share/confluent-hub-components
     
     command: 
       - bash
       - -c
       - |
-        echo "Installing Azure Blob and S3 connectors..."
+        # echo "Installing Azure Blob and S3 connectors..."
         
         # Azure Blob Storage용 플러그인 추가
-        confluent-hub install --no-prompt confluentinc/kafka-connect-azure-blob-storage:2.5.3
+        # confluent-hub install --no-prompt confluentinc/kafka-connect-azure-blob-storage:2.5.3
         
         # AWS S3용 플러그인
-        confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
+        # confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
         
         echo "Launching Kafka Connect..."
         /etc/confluent/docker/run
