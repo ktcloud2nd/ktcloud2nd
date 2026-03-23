@@ -28,7 +28,7 @@
 - name: Kafka Connect 서비스 안정화 대기
   pause:
     seconds: 45
-  remark: "플러그인(DB, S3)을 다운로드하고 8083 포트가 열릴 때까지 여유 있게 기다립니다."
+    prompt: "Consumer 앱과 Connector가 완전히 뜰 때까지 기다립니다."
 
 - name: "Azure Blob Storage Sink 커넥터 설정 (Raw Data)"
   uri:
