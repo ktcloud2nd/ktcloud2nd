@@ -1,7 +1,6 @@
 terraform {
   required_version = ">= 1.6.0"
 
-  # 기존코드+수정됨: 로컬 backend 미사용 상태에서 S3 remote backend 사용으로 변경
   backend "s3" {
     bucket  = "8team-terraform-tfstate"
     key     = "data/terraform.tfstate"

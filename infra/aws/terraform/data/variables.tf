@@ -10,13 +10,6 @@ variable "aws_region" {
   default     = "ap-northeast-2"
 }
 
-// 기존코드+수정됨
-// variable "network_state_path" {
-//   description = "Local path to the network terraform state file."
-//   type        = string
-//   default     = "../network/terraform.tfstate"
-// }
-
 variable "network_state_bucket" {
   description = "S3 bucket that stores the network terraform state file."
   type        = string
