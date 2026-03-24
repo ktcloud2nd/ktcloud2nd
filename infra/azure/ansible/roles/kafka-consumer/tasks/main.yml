@@ -52,9 +52,9 @@
         value.converter.schemas.enable: "false"
         confluent.topic.bootstrap.servers: "{{ broker_internal_ip }}:9094,{{ broker_internal_ip }}:9095,{{ broker_internal_ip }}:9096"
         # Azure 설정
-        azblob.account.name: "{{ azure_storage_account_name }}"
-        azblob.account.key: "{{ azure_storage_primary_key }}"
-        azblob.container.name: "raw-topic-container"
+        azure.storage.account.name: "{{ azure_storage_account_name }}"
+        azure.storage.account.key: "{{ azure_storage_primary_key }}"
+        azure.storage.container.name: "raw-topic-container"
         storage.class: "io.confluent.connect.azure.blob.storage.AzureBlobStorage"
         format.class: "io.confluent.connect.azure.blob.format.json.JsonFormat" # JSON으로 통일 권장
         flush.size: "100"

@@ -4,30 +4,32 @@ USER root
 RUN microdnf update && microdnf install -y unzip && microdnf clean all
 
 # ZIP 파일 복사
-# confluentinc-kafka-connect-azure-blob-storage-2.1.2
-# confluentinc-kafka-connect-s3-10.5.0
 COPY azure-part1.zip azure-part2.zip s3.zip /tmp/
 
 # 플러그인 루트 폴더 생성
 RUN mkdir -p /usr/share/confluent-hub-components/azure-blob/lib && \
     mkdir -p /usr/share/confluent-hub-components/s3/lib
 
-# 압축 해제 및 파일 정리
-# Azure Part 1 & 2
-RUN unzip -j /tmp/azure-part1.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/azure-blob/lib/ && \
-    unzip -j /tmp/azure-part2.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/azure-blob/lib/ && \
-    unzip -j /tmp/azure-part1.zip "*/manifest.json" -d /usr/share/confluent-hub-components/azure-blob/
+# 1. 압축 해제 (기존 로직 유지, -o 옵션으로 덮어쓰기 안전성 확보)
+RUN unzip -o -j /tmp/azure-part1.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/azure-blob/lib/ && \
+    unzip -o -j /tmp/azure-part2.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/azure-blob/lib/ && \
+    unzip -o -j /tmp/azure-part1.zip "*/manifest.json" -d /usr/share/confluent-hub-components/azure-blob/ && \
+    unzip -o -j /tmp/s3.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/s3/lib/ && \
+    unzip -o -j /tmp/s3.zip "*/manifest.json" -d /usr/share/confluent-hub-components/s3/
 
-# S3
-RUN unzip -j /tmp/s3.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/s3/lib/ && \
-    unzip -j /tmp/s3.zip "*/manifest.json" -d /usr/share/confluent-hub-components/s3/
+# 2. [★핵심 수정] 엔진(7.5.0)이 가진 Protobuf 관련 핵심 부품을 Azure 폴더에 강제로 넣어줍니다.
+# 이 한 줄이 "NoClassDefFoundError: ProtoSerde"를 잡는 치트키입니다.
+RUN cp /usr/share/java/kafka-serde-tools/kafka-protobuf-serializer-7.5.0.jar /usr/share/confluent-hub-components/azure-blob/lib/ && \
+    cp /usr/share/java/kafka-serde-tools/kafka-schema-serializer-7.5.0.jar /usr/share/confluent-hub-components/azure-blob/lib/
 
-# 권한 부여 및 임시 파일 삭제
+# 3. 권한 부여 (반드시 소유권을 appuser로 넘겨야 엔진이 파일을 읽습니다)
 RUN chown -R appuser:appuser /usr/share/confluent-hub-components && \
+    chmod -R 755 /usr/share/confluent-hub-components && \
     rm /tmp/*.zip
 
 USER appuser
 
+# plugin.path 설정 유지
 ENV CONNECT_PLUGIN_PATH="/usr/share/java,/usr/share/confluent-hub-components"
 
 CMD ["/etc/confluent/docker/run"]
