@@ -1,17 +1,20 @@
 FROM confluentinc/cp-kafka-connect:7.5.0
 
 USER root
-# 필요한 도구 설치 (unzip, wget)
-RUN microdnf update && microdnf install -y unzip wget && microdnf clean all
+# 1. 필수 도구 설치 (curl, unzip)
+RUN microdnf update && \
+    microdnf install -y unzip curl ca-certificates && \
+    microdnf clean all
 
-# Aiven 커넥터 자동 다운로드 (v0.9.0 기준)
-RUN wget https://github.com/aiven/azure-blob-storage-kafka-connector/releases/download/v0.9.0/aiven-kafka-connect-azure-blob-storage-0.9.0.zip -O /tmp/azure-aiven.zip
+# 2. 검증된 Aiven Azure Sink 커넥터 다운로드 (v3.4.2)
+# -L 옵션이 방금 보신 '리디렉션 알림'을 자동으로 처리해줍니다.
+RUN curl -L "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/releases/download/v3.4.2/azure-sink-connector-for-apache-kafka-3.4.2.zip" -o /tmp/azure-aiven.zip
 
-# 압축 해제 및 배치
+# 3. 압축 해제 및 라이브러리 추출
 RUN mkdir -p /usr/share/confluent-hub-components/azure-blob-aiven/lib && \
     unzip -o -j /tmp/azure-aiven.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/azure-blob-aiven/lib/
 
-# 권한 정리 및 임시파일 삭제
+# 4. 권한 정리 및 임시파일 삭제
 RUN chown -R appuser:appuser /usr/share/confluent-hub-components && \
     rm /tmp/azure-aiven.zip
 
