@@ -1,16 +1,18 @@
+# Dockerfile.j2
 FROM confluentinc/cp-kafka-connect:7.5.0
 
 USER root
 
-# 플러그인 경로 생성 및 권한 부여
+# 플러그인 루트 경로 생성
 RUN mkdir -p /usr/share/confluent-hub-components && \
     chown -R appuser:appuser /usr/share/confluent-hub-components
 
-# GitHub Actions가 미리 준비해둔 plugins 폴더를 이미지 안으로 복사만 합니다.
+# 워크플로우에서 준비한 plugins 폴더 통째로 복사
 COPY --chown=appuser:appuser plugins/ /usr/share/confluent-hub-components/
 
 USER appuser
 
+# 플러그인 경로를 루트로 잡아주면 하위 폴더들을 알아서 탐색합니다.
 ENV CONNECT_PLUGIN_PATH="/usr/share/java,/usr/share/confluent-hub-components"
 
 CMD ["/etc/confluent/docker/run"]

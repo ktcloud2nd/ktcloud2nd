@@ -34,11 +34,12 @@ jobs:
       # 도커 빌드 전, 호스트(GitHub 서버)에서 직접 플러그인 준비
       - name: Prepare Plugins
         run: |
-          mkdir -p ./plugins
-          curl -L -O https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-azure-blob-storage/versions/2.5.3/archive
-          curl -L -O https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-s3/versions/10.5.0/archive
-          unzip archive -d ./plugins/azure-blob || unzip archive.1 -d ./plugins/azure-blob
-          unzip archive.1 -d ./plugins/s3 || unzip archive -d ./plugins/s3
+          mkdir -p ./plugins/azure-blob
+          mkdir -p ./plugins/s3
+          curl -L -o azure.zip https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-azure-blob-storage/versions/2.5.3/archive
+          curl -L -o s3.zip https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-s3/versions/10.5.0/archive
+          unzip azure.zip -d ./plugins/azure-blob
+          unzip s3.zip -d ./plugins/s3
           cp -r ./plugins ./infra/azure/ansible/roles/kafka-consumer/templates/
 
       - name: Login to Docker Hub
