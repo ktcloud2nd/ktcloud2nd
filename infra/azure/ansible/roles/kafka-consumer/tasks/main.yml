@@ -1,9 +1,3 @@
----
-- name: "VM DNS 설정 강제 업데이트 (8.8.8.8)"
-  shell: |
-    echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-  become: yes
-
 - name: Consumer 작업용 루트(앱) 디렉토리 생성
   file:
     path: "/home/{{ ansible_user }}/consumer-app/app"
