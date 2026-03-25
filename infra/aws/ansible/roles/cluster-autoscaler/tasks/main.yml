@@ -1,0 +1,12 @@
+---
+- name: Cluster Autoscaler 배포
+  command: helm upgrade --install cluster-autoscaler autoscaler/cluster-autoscaler --namespace kube-system --set autoDiscovery.clusterName=8team-cluster --set awsRegion=ap-northeast-2
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Cluster Autoscaler 파드 준비 완료 대기
+  command: kubectl rollout status deployment/cluster-autoscaler-aws-cluster-autoscaler --namespace kube-system --timeout=180s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true

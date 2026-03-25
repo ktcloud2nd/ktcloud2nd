@@ -19,3 +19,28 @@
     name: k3s
     state: started
     enabled: yes
+
+- name: Helm CLI 설치 스크립트 다운로드
+  get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get-helm.sh
+    mode: '0755'
+  run_once: true
+
+- name: Helm CLI 설치
+  command: /tmp/get-helm.sh
+  args:
+    creates: /usr/local/bin/helm
+  run_once: true
+
+- name: autoscaler Helm repo 추가
+  command: helm repo add autoscaler https://kubernetes.github.io/autoscaler
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Helm repo 업데이트
+  command: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
