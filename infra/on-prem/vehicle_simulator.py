@@ -115,7 +115,13 @@ for v in vehicles:
 
 try:
     while True:
-        time.sleep(0.05)
-except KeyboardInterrupt:
-    print("\n시뮬레이터 종료")
-    producer.flush() # 남은 데이터 확실히 밀어넣기
+        time.sleep(1)
+except Exception as e:
+    # 에러가 나거나 외부에서 종료 신호가 와도 이쪽으로 넘어올 수 있음
+    print(f"알림: 시뮬레이터가 중단되었습니다. ({e})")
+finally:
+    # 어떤 이유로든 프로그램이 끝날 때 마지막으로 실행됨
+    print("메모리의 남은 데이터를 전송(Flush) 중...")
+    producer.flush()
+    producer.close()
+    print("전송 완료 및 종료.")
