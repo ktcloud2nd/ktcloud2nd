@@ -277,3 +277,36 @@ resource "aws_lb" "public" {
     Name = "${var.name_prefix}-alb"
   }
 }
+
+# ALB Target Group - 워커 노드 HTTP:80 (Traefik)
+resource "aws_lb_target_group" "worker_http" {
+  name     = "${var.name_prefix}-worker-http-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.this.id
+
+  health_check {
+    path                = "/ping"
+    protocol            = "HTTP"
+    port                = "80"
+    interval            = 30
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = {
+    Name = "${var.name_prefix}-worker-http-tg"
+  }
+}
+
+# ALB Listener - HTTP:80 → 워커 노드:80 포워딩
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.public.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.worker_http.arn
+  }
+}

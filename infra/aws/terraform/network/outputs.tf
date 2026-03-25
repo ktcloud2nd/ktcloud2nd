@@ -68,6 +68,11 @@ output "db_sg_id" {
   value       = aws_security_group.db.id
 }
 
+output "alb_target_group_arn" {
+  description = "ALB worker HTTP target group ARN."
+  value       = aws_lb_target_group.worker_http.arn
+}
+
 output "security_group_ids" {
   description = "Core security group identifiers."
   value = {

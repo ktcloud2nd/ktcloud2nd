@@ -189,6 +189,12 @@ resource "aws_autoscaling_group" "worker_user_asg" {
   }
 }
 
+# [5-1] ALB Target Group 연결 - user worker ASG
+resource "aws_autoscaling_attachment" "worker_user" {
+  autoscaling_group_name = aws_autoscaling_group.worker_user_asg.name
+  lb_target_group_arn    = data.terraform_remote_state.network.outputs.alb_target_group_arn
+}
+
 # [6] ASG - operator workload worker pool.
 # desired=2 keeps one worker in each AZ by default.
 resource "aws_autoscaling_group" "worker_op_asg" {
@@ -218,4 +224,10 @@ resource "aws_autoscaling_group" "worker_op_asg" {
     value               = "owned"
     propagate_at_launch = true
   }
+}
+
+# [6-1] ALB Target Group 연결 - operator worker ASG
+resource "aws_autoscaling_attachment" "worker_op" {
+  autoscaling_group_name = aws_autoscaling_group.worker_op_asg.name
+  lb_target_group_arn    = data.terraform_remote_state.network.outputs.alb_target_group_arn
 }
