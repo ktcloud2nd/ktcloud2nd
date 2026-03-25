@@ -1,19 +1,6 @@
 name: deploy-infra-aws
 
 on:
-  push:
-    branches:
-      - main
-      - aws-cicd
-    paths:
-      - "infra/aws/terraform/**"
-      - ".github/workflows/deploy-infra-aws.yml"
-
-  pull_request:
-    paths:
-      - "infra/aws/terraform/**"
-      - ".github/workflows/deploy-infra-aws.yml"
-
   workflow_dispatch:
 
 permissions:
