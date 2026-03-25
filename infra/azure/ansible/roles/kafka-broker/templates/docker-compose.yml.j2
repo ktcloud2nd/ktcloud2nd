@@ -5,30 +5,25 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka{{ i }}
     ports:
-      - "{{ 9093 + i }}:{{ 9093 + i }}"  # EXTERNAL: 온프렘 시뮬레이터용 (9094, 9095, 9096)
-      - "{{ 9090 + i }}:{{ 9090 + i }}"  # INTERNAL: Azure 내부 컨슈머용 (9091, 9092, 9093)
+      - "{{ 9093 + i }}:{{ 9093 + i }}"  # EXTERNAL: 9094, 9095, 9096
+      - "{{ 9090 + i }}:{{ 9090 + i }}"  # INTERNAL: 9091, 9092, 9093
     environment:
       KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
       KAFKA_NODE_ID: {{ i }}
       KAFKA_PROCESS_ROLES: 'broker,controller'
       
-      # 모든 인터페이스(0.0.0.0)에서 각 포트를 열어둠
-      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:{{ 9090 + i }},EXTERNAL://0.0.0.0:{{ 9093 + i }},CONTROLLER://0.0.0.0:9093'
+      # CONTROLLER 포트를 9093에서 9090으로 변경
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:{{ 9090 + i }},EXTERNAL://0.0.0.0:{{ 9093 + i }},CONTROLLER://0.0.0.0:9090'
       
-      # 브로커끼리 투표하기 위한 주소 (컨테이너 이름 사용)
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
+      # 컨트롤러 주소의 포트도 9090으로 변경
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9090,2@kafka2:9090,3@kafka3:9090'
       
-      # 접속자가 보고 찾아올 광고용 주소
-      # INTERNAL: Azure 내부 VM들이 브로커의 내부 IP로 찾아옴
-      # EXTERNAL: 온프레미스 시뮬레이터가 브로커의 공인 IP로 찾아옴
       KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://{{ broker_internal_ip }}:{{ 9090 + i }},EXTERNAL://{{ broker_public_ip }}:{{ 9093 + i }}'
       
-      # 리스너 프로토콜 매핑
       KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
       
-      # 클러스터 설정
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
