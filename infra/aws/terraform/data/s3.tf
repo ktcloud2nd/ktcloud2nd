@@ -113,6 +113,7 @@ resource "aws_s3_bucket_policy" "images_public_read" {
   })
 }
 
+/*
 # 차량 이미지 접근
 locals {
   vehicle_image_files = fileset("${path.module}/assets", "*")
@@ -134,3 +135,4 @@ resource "aws_s3_object" "vehicle_images" {
     webp = "image/webp"
   }, lower(element(split(".", each.value), length(split(".", each.value)) - 1)), "application/octet-stream")
 }
+*/
