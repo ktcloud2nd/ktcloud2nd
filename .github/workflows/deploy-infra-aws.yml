@@ -177,11 +177,11 @@ jobs:
           NAME_PREFIX=$(grep '^name_prefix' terraform.tfvars | sed 's/.*= *"\(.*\)"/\1/')
           BUCKET_NAME="${NAME_PREFIX}-data"
           echo "대상 버킷: $BUCKET_NAME"
-          if terraform state show aws_s3_bucket.this > /dev/null 2>&1; then
+          if terraform state show aws_s3_bucket.data > /dev/null 2>&1; then
             echo "이미 state에 존재 - import 생략"
           elif aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
             echo "AWS에 버킷 존재 - import 실행"
-            terraform import aws_s3_bucket.this "$BUCKET_NAME"
+            terraform import aws_s3_bucket.data "$BUCKET_NAME"
           else
             echo "버킷 미존재 - terraform apply에서 신규 생성"
           fi
