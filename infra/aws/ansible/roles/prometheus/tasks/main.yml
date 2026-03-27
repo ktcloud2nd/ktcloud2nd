@@ -29,12 +29,21 @@
   failed_when: false
   changed_when: false
 
-- name: 실패한 릴리즈 제거 (재설치 위해)
+- name: Prometheus StatefulSet 존재 여부 확인
+  shell: kubectl get statefulset prometheus-kube-prometheus-stack-prometheus --namespace operator-app 2>/dev/null && echo "exists" || echo "not-found"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  register: prometheus_statefulset_status
+  failed_when: false
+  changed_when: false
+
+- name: 실패하거나 불완전한 릴리즈 제거 (재설치 위해)
   command: helm uninstall kube-prometheus-stack --namespace operator-app
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  when: prometheus_release_status.stdout == "failed"
+  when: prometheus_release_status.stdout == "failed" or (prometheus_release_status.stdout == "deployed" and prometheus_statefulset_status.stdout == "not-found")
 
 - name: kube-prometheus-stack Helm 배포
   command: >
@@ -63,7 +72,7 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  when: prometheus_release_status.stdout != "deployed"
+  when: prometheus_release_status.stdout != "deployed" or prometheus_statefulset_status.stdout == "not-found"
 
 - name: Grafana 파드 준비 완료 대기
   command: kubectl rollout status deployment/kube-prometheus-stack-grafana --namespace operator-app --timeout=300s
