@@ -260,7 +260,7 @@ resource "aws_security_group" "db" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/32"] # 데이터 전송 테스트를 위해 임시로 개방
+    cidr_blocks = ["0.0.0.0/0"] # 데이터 전송 테스트를 위해 임시로 개방
   }
 
   egress {
