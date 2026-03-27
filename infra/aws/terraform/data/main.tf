@@ -1,12 +1,38 @@
+data "aws_vpc" "selected" {
+  filter {
+    name   = "tag:Name"
+    values = ["${var.name_prefix}-vpc"]
+  }
+}
+
+data "aws_subnets" "db" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.selected.id]
+  }
+  filter {
+    name   = "tag:Tier"
+    values = ["private-db"]
+  }
+}
+
+data "aws_security_group" "db_sg" {
+  filter {
+    name   = "tag:Name"
+    values = ["${var.name_prefix}-db-sg"] # network/의 aws_security_group.db 태그와 일치
+  }
+}
+
 resource "aws_db_subnet_group" "postgresql" {
   name       = "${var.name_prefix}-db-subnet-group"
-  subnet_ids = aws_subnet.private_db[*].id
+  subnet_ids = data.aws_subnets.db.ids # 여기서 찾아온 ID 사용
 
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-db-subnet-group"
   })
 }
 
+# PostgreSQL 생성
 resource "aws_db_instance" "postgresql" {
   identifier = "${var.name_prefix}-postgres"
 
@@ -23,7 +49,7 @@ resource "aws_db_instance" "postgresql" {
   port     = var.db_port
 
   db_subnet_group_name   = aws_db_subnet_group.postgresql.name
-  vpc_security_group_ids = [aws_security_group.db.id]
+  vpc_security_group_ids = [data.aws_security_group.db_sg.id]
 
   publicly_accessible = false
   multi_az            = false # Multi-AZ 적용(true) 예정
@@ -50,11 +76,9 @@ resource "aws_db_instance" "postgresql" {
 # Route 53 프라이빗 호스팅 영역 (삭제 방지 설정)
 resource "aws_route53_zone" "private" {
   name = "vehicle.internal" # 우리가 지정한 도메인 이름
-
   vpc {
-    vpc_id = aws_vpc.this.id
+    vpc_id = data.aws_vpc.selected.id
   }
-
   lifecycle {
     prevent_destroy = true # 700원 아끼기 위해 테라폼 destroy 시에도 남겨둠
   }
