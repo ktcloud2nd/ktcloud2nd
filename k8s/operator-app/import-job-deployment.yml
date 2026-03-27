@@ -22,7 +22,7 @@ spec:
         role: operator-worker
       containers:
         - name: import-job
-          image: PLACEHOLDER/import-job:latest
+          image: wooyeol43/import-job:latest
           envFrom:
             - configMapRef:
                 name: import-job-config
