@@ -1,0 +1,138 @@
+---
+- name: ArgoCD Helm repo 추가
+  command: helm repo add argo https://argoproj.github.io/argo-helm --force-update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Helm repo 업데이트
+  command: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: ArgoCD 릴리즈 상태 확인
+  shell: >
+    helm status argocd --namespace argocd --output json 2>/dev/null
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['status'])"
+    2>/dev/null || echo "not-found"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  register: argocd_release_status
+  failed_when: false
+  changed_when: false
+
+- name: 실패한 ArgoCD 릴리즈 제거 (재설치 위해)
+  command: helm uninstall argocd --namespace argocd
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  when: argocd_release_status.stdout in ["failed", "pending-install", "pending-upgrade"]
+
+- name: ArgoCD Helm 배포
+  command: >
+    helm upgrade --install argocd argo/argo-cd
+    --namespace argocd
+    --create-namespace
+    --set configs.params."server\.insecure"=true
+    --set server.tolerations[0].key=nodetype
+    --set server.tolerations[0].operator=Equal
+    --set server.tolerations[0].value=operator
+    --set server.tolerations[0].effect=NoSchedule
+    --set server.nodeSelector.role=operator-worker
+    --set repoServer.tolerations[0].key=nodetype
+    --set repoServer.tolerations[0].operator=Equal
+    --set repoServer.tolerations[0].value=operator
+    --set repoServer.tolerations[0].effect=NoSchedule
+    --set repoServer.nodeSelector.role=operator-worker
+    --set applicationSet.tolerations[0].key=nodetype
+    --set applicationSet.tolerations[0].operator=Equal
+    --set applicationSet.tolerations[0].value=operator
+    --set applicationSet.tolerations[0].effect=NoSchedule
+    --set applicationSet.nodeSelector.role=operator-worker
+    --set controller.tolerations[0].key=nodetype
+    --set controller.tolerations[0].operator=Equal
+    --set controller.tolerations[0].value=operator
+    --set controller.tolerations[0].effect=NoSchedule
+    --set controller.nodeSelector.role=operator-worker
+    --set redis.tolerations[0].key=nodetype
+    --set redis.tolerations[0].operator=Equal
+    --set redis.tolerations[0].value=operator
+    --set redis.tolerations[0].effect=NoSchedule
+    --set redis.nodeSelector.role=operator-worker
+    --set dex.tolerations[0].key=nodetype
+    --set dex.tolerations[0].operator=Equal
+    --set dex.tolerations[0].value=operator
+    --set dex.tolerations[0].effect=NoSchedule
+    --set dex.nodeSelector.role=operator-worker
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  when: argocd_release_status.stdout != "deployed"
+
+- name: ArgoCD 서버 준비 완료 대기
+  command: kubectl rollout status deployment/argocd-server --namespace argocd --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: operator-app ArgoCD Application 생성
+  shell: |
+    kubectl apply --validate=false -f - <<EOF
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: operator-app
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: {{ argocd_repo_url }}
+        targetRevision: feature/aws-k3s
+        path: k8s/operator-app
+        directory:
+          exclude: '*-secret.yml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: operator-app
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: user-app ArgoCD Application 생성
+  shell: |
+    kubectl apply --validate=false -f - <<EOF
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: user-app
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: {{ argocd_repo_url }}
+        targetRevision: feature/aws-k3s
+        path: k8s/user-app
+        directory:
+          exclude: '*-secret.yml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: user-app
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
