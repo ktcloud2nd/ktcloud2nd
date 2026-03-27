@@ -25,7 +25,7 @@ output "db_name" {
 
 output "db_username" {
   description = "Master username for RDS."
-  value       = aws_db_instance.this.username
+  value       = aws_db_instance.postgresql.username
 }
 
 output "db_subnet_group_name" {

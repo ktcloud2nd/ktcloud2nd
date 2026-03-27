@@ -4,7 +4,7 @@ import time
 import threading
 from kafka import KafkaConsumer, KafkaProducer
 
-# 1. 환경변수 및 토픽 설정
+# 환경변수 및 토픽 설정
 KAFKA_BROKER = os.environ.get('KAFKA_BROKER', 'localhost:9092')
 RAW_TOPIC = 'raw_topic'
 CLEANSED_TOPIC = 'cleansed_topic'
@@ -12,7 +12,7 @@ ANOMALY_TOPIC = 'anomaly_topic'
 
 print(f"--- 통합 프로세서 가동 시작 (Broker: {KAFKA_BROKER}) ---")
 
-# 2. 카프카 클라이언트 연결 함수
+# 카프카 클라이언트 연결 함수
 def create_kafka_clients():
     while True:
         try:
@@ -39,7 +39,7 @@ consumer, producer = create_kafka_clients()
 # 차량별 이전 상태 저장용 메모리 (판단 근거)
 vehicle_states = {}
 
-# 3. 이상 탐지 전송 함수 (실속형: 핵심 증거만 전송)
+# 이상 탐지 전송 함수 (실속형: 핵심 증거만 전송)
 def send_alert(vehicle_id, anomaly_type, description, evidence_value, timestamp):
     """ 이상 징후 발생 시 필요한 수치만 골라 별도 토픽으로 전송 """
     alert = {
@@ -54,7 +54,7 @@ def send_alert(vehicle_id, anomaly_type, description, evidence_value, timestamp)
     producer.send(ANOMALY_TOPIC, key=str(vehicle_id).encode('utf-8'), value=alert)
     print(f"[알람 발송] {vehicle_id}: {anomaly_type} ({evidence_value})")
 
-# 4. 백그라운드 스레드: 30초 미수신 감시
+# 백그라운드 스레드: 30초 미수신 감시
 def monitor_missing_data():
     while True:
         now = time.time()
@@ -67,7 +67,7 @@ def monitor_missing_data():
 
 threading.Thread(target=monitor_missing_data, daemon=True).start()
 
-# 5. 실시간 메시지 처리 루프
+# 실시간 메시지 처리 루프
 print(f"실시간 정제 및 이상 탐지 루프 시작...")
 
 try:
@@ -81,7 +81,7 @@ try:
 
         if not v_id: continue
 
-        # --- [STEP 1: 상태 업데이트 및 복구 확인] ---
+        # --- 상태 업데이트 및 복구 확인 ---
         if v_id not in vehicle_states:
             vehicle_states[v_id] = {
                 "last_speed": raw_data.get('speed', 0),
@@ -98,16 +98,16 @@ try:
             print(f"[복구 확인] {v_id} 차량 통신 재개")
             state['missing_alert_sent'] = False
 
-        # --- [STEP 2: 이상 탐지 로직 (Evidence 추출)] ---
+        # --- 이상 탐지 로직 (Evidence 추출) ---
         
-        # A. 데이터 폭주 (초당 메시지 개수)
+        # 데이터 폭주 (초당 메시지 개수)
         state['msg_times'].append(now)
         state['msg_times'] = [t for t in state['msg_times'] if now - t <= 1.0]
         msg_count = len(state['msg_times'])
         if msg_count >= 5:
             send_alert(v_id, "DATA_BURST", "데이터 수신 폭주", f"{msg_count} req/s", v_timestamp)
 
-        # B. 급가감속 (부호 포함 변화량)
+        # 급가감속 (부호 포함 변화량)
         curr_speed = raw_data.get('speed', 0)
         speed_diff = curr_speed - state['last_speed']
         if speed_diff >= 50:
@@ -115,12 +115,12 @@ try:
         elif speed_diff <= -50:
             send_alert(v_id, "SUDDEN_DECEL", "급감속 감지", f"{speed_diff} km/h", v_timestamp)
 
-        # C. 연료 부족 (현재 잔량 %)
+        # 연료 부족 (현재 잔량 %)
         fuel = raw_data.get('fuel_level', 100)
         if fuel < 5.0:
             send_alert(v_id, "LOW_FUEL", "연료 부족 경고", f"잔량 {fuel}%", v_timestamp)
 
-        # D. GPS 도약 (변화 거리 도)
+        # GPS 도약 (변화 거리 도)
         curr_lat = raw_data.get('lat', 0)
         lat_diff = abs(curr_lat - state['last_lat'])
         if lat_diff > 1.0:
@@ -130,17 +130,17 @@ try:
         state['last_speed'] = curr_speed
         state['last_lat'] = curr_lat
 
-        # --- [STEP 3: 데이터 정제 및 전송] ---
-        # 1. 개인정보(driver_id) 삭제
+        # --- 데이터 정제 및 전송 ---
+        # 개인정보(driver_id) 삭제
         if 'driver_id' in raw_data:
             del raw_data['driver_id']
 
-        # 2. 비정상 노이즈 데이터 필터링
+        # 비정상 노이즈 데이터 필터링
         if not (-90 <= curr_lat <= 90) or curr_speed < 0 or curr_speed > 300:
             print(f"노이즈 데이터 필터링됨 (v_id: {v_id})")
             continue
             
-        # 3. 정제 완료된 전체 데이터 전송 (cleansed_topic)
+        # 정제 완료된 전체 데이터 전송 (cleansed_topic)
         producer.send(CLEANSED_TOPIC, key=original_key, value=raw_data)
 
 except KeyboardInterrupt:
