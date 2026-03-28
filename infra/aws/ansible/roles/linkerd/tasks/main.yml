@@ -51,14 +51,13 @@
   when: linkerd_ns_check.rc != 0
 
 - name: Linkerd 컨트롤 플레인 준비 완료 대기 (최대 5분)
-  command: linkerd check
+  shell: |
+    timeout 300 bash -lc 'until linkerd check; do sleep 30; done'
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
   register: linkerd_check
-  until: linkerd_check.rc == 0
-  retries: 10
-  delay: 30
+  changed_when: false
 
 - name: Linkerd Viz extension 설치
   shell: linkerd viz install | kubectl apply -f -
@@ -67,14 +66,13 @@
   run_once: true
 
 - name: Linkerd Viz 준비 완료 대기 (최대 5분)
-  command: linkerd viz check
+  shell: |
+    timeout 300 bash -lc 'until linkerd viz check; do sleep 30; done'
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
   register: linkerd_viz_check
-  until: linkerd_viz_check.rc == 0
-  retries: 10
-  delay: 30
+  changed_when: false
 
 - name: user-app 네임스페이스 생성 및 Linkerd 주입 활성화
   shell: |
