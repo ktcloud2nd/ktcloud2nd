@@ -60,7 +60,14 @@
   changed_when: false
 
 - name: Linkerd Viz extension 설치
-  shell: linkerd viz install | kubectl apply -f -
+  shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: linkerd-viz
+    EOF
+    linkerd viz install | kubectl apply -f -
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
