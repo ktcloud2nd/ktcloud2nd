@@ -25,6 +25,11 @@ resource "azurerm_storage_account" "raw_storage" {
     environment = "dev"
     purpose     = "raw-data-lake"
   }
+  
+    # 서브넷이 완전히 준비될 때까지 기다리도록 강제
+  depends_on = [
+    azurerm_subnet.consumer_subnet
+  ]
 }
 
 # 데이터를 담을 Data Lake Gen2 전용 파일 시스템(컨테이너) 생성
