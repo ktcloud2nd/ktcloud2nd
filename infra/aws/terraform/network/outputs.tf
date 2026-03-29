@@ -13,9 +13,9 @@ output "private_app_subnet_ids" {
   value       = aws_subnet.private_app[*].id
 }
 
-output "private_db_subnet_ids" {
-  description = "Private database subnet identifiers."
-  value       = aws_subnet.private_db[*].id
+output "db_subnet_ids" {
+  description = "Database subnet identifiers."
+  value       = aws_subnet.db[*].id
 }
 
 output "public_route_table_id" {
@@ -28,19 +28,14 @@ output "private_app_route_table_ids" {
   value       = aws_route_table.private_app[*].id
 }
 
-output "private_db_route_table_ids" {
-  description = "Private DB route table identifiers."
-  value       = aws_route_table.private_db[*].id
+output "db_route_table_ids" {
+  description = "DB route table identifiers."
+  value       = aws_route_table.db[*].id
 }
 
 output "nat_gateway_ids" {
   description = "NAT gateway identifiers."
   value       = aws_nat_gateway.this[*].id
-}
-
-output "s3_gateway_endpoint_id" {
-  description = "S3 gateway VPC endpoint identifier."
-  value       = aws_vpc_endpoint.s3.id
 }
 
 output "alb_arn" {
@@ -79,6 +74,5 @@ output "security_group_ids" {
     alb       = aws_security_group.alb.id
     k3s_nodes = aws_security_group.k3s_nodes.id
     db        = aws_security_group.db.id
-    #lambda    = aws_security_group.lambda.id
   }
 }
