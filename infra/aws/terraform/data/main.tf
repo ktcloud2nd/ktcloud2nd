@@ -12,7 +12,7 @@ data "aws_subnets" "db" {
   }
   filter {
     name   = "tag:Tier"
-    values = ["private-db"]
+    values = ["db"]
   }
 }
 
@@ -51,7 +51,7 @@ resource "aws_db_instance" "postgresql" {
   db_subnet_group_name   = aws_db_subnet_group.postgresql.name
   vpc_security_group_ids = [data.aws_security_group.db_sg.id]
 
-  publicly_accessible = false
+  publicly_accessible = true # Consumer VM으로부터 데이터 받으려면 퍼블릭 액세스 허용해야 함 (방화벽 있으므로 보안 안심해도 됨)
   multi_az            = false # Multi-AZ 적용(true) 예정
 
   backup_retention_period = var.backup_retention_period
