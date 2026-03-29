@@ -34,3 +34,7 @@ ssh consumer
 # 파이썬 정제기 로그 확인
 docker logs -f python-processor
 ```
+<br>
+
+> **Tip:** 인프라를 재배포(Destroy & Apply)하여 Bastion IP가 변경된 경우, 
+> 로컬 터미널에서 `ssh-keygen -R <NEW_BASTION_IP>` 명령어로 기존 호스트 정보를 갱신해야 접속 오류가 발생하지 않습니다.
