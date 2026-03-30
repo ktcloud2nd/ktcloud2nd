@@ -187,6 +187,5 @@ jobs:
           -e "broker_internal_ip=${BROKER_PRIV_IP}" \
           -e "azure_storage_account_name=${{ env.AZURE_STORAGE_NAME }}" \
           -e "azure_storage_primary_key=${{ env.AZURE_STORAGE_KEY }}" \
-          -e "rds_endpoint=db.vehicle.internal" \
           -e "db_name=vehicle_db" \
           -e "db_user=dbadmin"

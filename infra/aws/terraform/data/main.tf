@@ -90,6 +90,8 @@ resource "aws_ssm_parameter" "db_password" {
   type        = "SecureString" # 암호화 저장
   value       = var.db_password # 테라폼 변수에 들어있는 그 비번
 }
+# 비밀번호 전달 파이프라인:
+# GitHub Secrets에 PW 보관 -> temp 치환 -> SSM 생성
 
 # RDS 고정 주소 레코드 (CNAME)
 resource "aws_route53_record" "db_endpoint" {
