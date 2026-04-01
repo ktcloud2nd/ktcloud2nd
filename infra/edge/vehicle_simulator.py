@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import json
 import threading
@@ -46,7 +46,7 @@ vehicles = [
         "engine_on": True,
         "fuel_level": round(random.uniform(5, 100), 2)
     }
-    for i in range(100)
+    for i in range(500)
 ]
 
 def clamp(value, min_value, max_value):
@@ -106,15 +106,15 @@ def simulate_vehicle(vehicle):
         roll = random.random()
 
         # 이상 데이터 발생 구간 (합계 10%)
-        if roll < 0.05: # 미수신 (30초 잠수)
+        if roll < 0.01: # 미수신 (30초 잠수)
             time.sleep(30)
             continue
-        elif roll < 0.08: # 폭주 (짧은 간격(1초 내) 5회 연속 전송)
+        elif roll < 0.015: # 폭주 (짧은 간격(1초 내) 5회 연속 전송)
             for _ in range(5):
                 send_to_kafka(vehicle, 1, 1)
                 time.sleep(0.1)
             continue
-        elif roll < 0.10: # GPS 도약
+        elif roll < 0.02: # GPS 도약
             tmp_lat = vehicle["lat"]
             vehicle["lat"] += 1.2 # 약 130km 점프
             send_to_kafka(vehicle, 1, 1)
@@ -123,11 +123,11 @@ def simulate_vehicle(vehicle):
             continue
 
         # 일반 주행 시뮬레이션 로직
-        if random.random() < 0.15:
+        if random.random() < 0.02:
             vehicle["engine_on"] = not vehicle["engine_on"]
         
         if vehicle["engine_on"]:
-            if random.random() < 0.7: # 주행 중 (Driving)
+            if random.random() < 0.95: # 주행 중 (Driving)
                 vehicle["speed"] = random.randint(30, 100)
                 vehicle["fuel_level"] = max(0, vehicle["fuel_level"] - random.uniform(0.1, 0.5))
                 vehicle["lat"] += random.uniform(-0.001, 0.001) * (vehicle["speed"] / 50)
