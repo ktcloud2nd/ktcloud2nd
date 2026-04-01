@@ -99,7 +99,14 @@
 - name: DB Secret 생성 (login, user-app, operator-app 네임스페이스)
   shell: |
     for NS in login user-app operator-app; do
-      kubectl create namespace $NS --dry-run=client -o yaml | kubectl apply -f -
+      kubectl apply -f - <<NSEOF
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: $NS
+      annotations:
+        linkerd.io/inject: enabled
+    NSEOF
       kubectl create secret generic db-secret \
         --namespace=$NS \
         --from-literal=DB_HOST=db.vehicle.internal \

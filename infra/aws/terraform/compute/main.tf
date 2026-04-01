@@ -57,8 +57,9 @@ resource "aws_instance" "k3s_master_a" {
   private_ip = var.master_a_private_ip
 
   tags = {
-    Name = "${local.name_prefix}-master-a"
-    Role = "master"
+    Name                                          = "${local.name_prefix}-master-a"
+    Role                                          = "master"
+    "kubernetes.io/cluster/${var.cluster_name}"   = "owned"
   }
 }
 
@@ -74,8 +75,9 @@ resource "aws_instance" "k3s_master_c" {
   private_ip = var.master_c_private_ip
 
   tags = {
-    Name = "${local.name_prefix}-master-c"
-    Role = "master"
+    Name                                          = "${local.name_prefix}-master-c"
+    Role                                          = "master"
+    "kubernetes.io/cluster/${var.cluster_name}"   = "owned"
   }
 }
 
@@ -119,8 +121,9 @@ resource "aws_launch_template" "k3s_worker_user_lt" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name = "${local.name_prefix}-worker-user"
-      Role = "user-workload"
+      Name                                          = "${local.name_prefix}-worker-user"
+      Role                                          = "user-workload"
+      "kubernetes.io/cluster/${var.cluster_name}"   = "owned"
     }
   }
 }
@@ -152,8 +155,9 @@ resource "aws_launch_template" "k3s_worker_op_lt" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name = "${local.name_prefix}-worker-op"
-      Role = "operator-workload"
+      Name                                          = "${local.name_prefix}-worker-op"
+      Role                                          = "operator-workload"
+      "kubernetes.io/cluster/${var.cluster_name}"   = "owned"
     }
   }
 }

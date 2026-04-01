@@ -11,8 +11,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: admin.example.com
-      http:
+    - http:
         paths:
           - path: /home
             pathType: Prefix

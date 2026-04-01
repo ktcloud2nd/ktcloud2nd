@@ -9,8 +9,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: admin.example.com
-      http:
+    - http:
         paths:
           - path: /login
             pathType: Prefix
