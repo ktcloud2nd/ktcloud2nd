@@ -14,10 +14,10 @@ spec:
     - host: app.example.com
       http:
         paths:
-          - path: /
+          - path: /home
             pathType: Prefix
             backend:
               service:
-                name: user-web-service
+                name: user-app
                 port:
                   number: 80

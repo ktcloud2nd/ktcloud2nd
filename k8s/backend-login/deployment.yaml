@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: login
+  name: backend-login
   namespace: login
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: login
+      app: backend-login
   template:
     metadata:
       labels:
-        app: login
+        app: backend-login
     spec:
       tolerations:
         - key: nodetype
@@ -27,13 +27,16 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app: login
+                    app: backend-login
                 topologyKey: kubernetes.io/hostname
       containers:
-        - name: login
-          image: __DOCKERHUB_USERNAME__/login:latest  # Docker Hub 계정명으로 교체
+        - name: backend-login
+          image: wooyeol43/login-backend:latest
           ports:
-            - containerPort: 80
+            - containerPort: 4000
+          env:
+            - name: APP_TARGET
+              value: "login"
           resources:
             requests:
               cpu: 250m

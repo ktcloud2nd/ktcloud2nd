@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: operator-app
-  namespace: operator-app
+  name: login-operator
+  namespace: login
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: operator-app
+      app: login-operator
   template:
     metadata:
       labels:
-        app: operator-app
+        app: login-operator
     spec:
       tolerations:
         - key: nodetype
@@ -20,9 +20,18 @@ spec:
           effect: NoSchedule
       nodeSelector:
         role: operator-worker
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: login-operator
+                topologyKey: kubernetes.io/hostname
       containers:
-        - name: operator-app
-          image: __DOCKERHUB_USERNAME__/operator-app:latest  # Docker Hub 계정명으로 교체
+        - name: login-operator
+          image: wooyeol43/login-frontend-operator:latest
           ports:
             - containerPort: 80
           resources:

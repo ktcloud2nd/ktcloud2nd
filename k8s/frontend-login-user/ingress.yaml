@@ -1,20 +1,21 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: grafana-ingress
-  namespace: operator-app
+  name: login-ingress
+  namespace: login
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
-    traefik.ingress.kubernetes.io/router.priority: "20"
+    traefik.ingress.kubernetes.io/router.middlewares: login-coraza-waf@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
-    - http:
+    - host: app.example.com
+      http:
         paths:
-          - path: /grafana
+          - path: /login
             pathType: Prefix
             backend:
               service:
-                name: kube-prometheus-stack-grafana
+                name: login
                 port:
                   number: 80

@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-user
+  name: user-app
   namespace: user-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: backend-user
+      app: user-app
   template:
     metadata:
       labels:
-        app: backend-user
+        app: user-app
     spec:
       tolerations:
         - key: nodetype
@@ -27,16 +27,13 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app: backend-user
+                    app: user-app
                 topologyKey: kubernetes.io/hostname
       containers:
-        - name: backend-user
-          image: __DOCKERHUB_USERNAME__/backend-user:latest
+        - name: user-app
+          image: wooyeol43/user-frontend:latest
           ports:
-            - containerPort: 4000
-          env:
-            - name: APP_TARGET
-              value: "user"
+            - containerPort: 80
           resources:
             requests:
               cpu: 250m

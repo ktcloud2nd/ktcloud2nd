@@ -109,7 +109,7 @@
       source:
         repoURL: {{ argocd_repo_url }}
         targetRevision: aws-web
-        path: k8s/operator-app
+        path: k8s/frontend-operator-app
         directory:
           exclude: '*-secret.yml'
       destination:
@@ -126,20 +126,52 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: login ArgoCD Application 생성
+- name: frontend-login-user ArgoCD Application 생성
   shell: |
     kubectl apply --validate=false -f - <<EOF
     apiVersion: argoproj.io/v1alpha1
     kind: Application
     metadata:
-      name: login
+      name: frontend-login-user
       namespace: argocd
     spec:
       project: default
       source:
         repoURL: {{ argocd_repo_url }}
         targetRevision: aws-web
-        path: k8s/login
+        path: k8s/frontend-login-user
+        directory:
+          exclude: '*-secret.yml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: login
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: frontend-login-operator ArgoCD Application 생성
+  shell: |
+    kubectl apply --validate=false -f - <<EOF
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: frontend-login-operator
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: {{ argocd_repo_url }}
+        targetRevision: aws-web
+        path: k8s/frontend-login-operator
+        directory:
+          exclude: '*-secret.yml'
       destination:
         server: https://kubernetes.default.svc
         namespace: login
@@ -167,12 +199,102 @@
       source:
         repoURL: {{ argocd_repo_url }}
         targetRevision: aws-web
-        path: k8s/user-app
+        path: k8s/frontend-user-app
         directory:
           exclude: '*-secret.yml'
       destination:
         server: https://kubernetes.default.svc
         namespace: user-app
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: backend-login ArgoCD Application 생성
+  shell: |
+    kubectl apply --validate=false -f - <<EOF
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: backend-login
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: {{ argocd_repo_url }}
+        targetRevision: aws-web
+        path: k8s/backend-login
+        directory:
+          exclude: '*-secret.yml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: login
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: backend-user ArgoCD Application 생성
+  shell: |
+    kubectl apply --validate=false -f - <<EOF
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: backend-user
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: {{ argocd_repo_url }}
+        targetRevision: aws-web
+        path: k8s/backend-user
+        directory:
+          exclude: '*-secret.yml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: user-app
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: backend-operator ArgoCD Application 생성
+  shell: |
+    kubectl apply --validate=false -f - <<EOF
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: backend-operator
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: {{ argocd_repo_url }}
+        targetRevision: aws-web
+        path: k8s/backend-operator
+        directory:
+          exclude: '*-secret.yml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: operator-app
       syncPolicy:
         automated:
           prune: true
