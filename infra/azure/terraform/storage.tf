@@ -26,9 +26,11 @@ resource "azurerm_storage_account" "raw_storage" {
     purpose     = "raw-data-lake"
   }
 
-    # 서브넷이 완전히 준비될 때까지 기다리도록 강제
+  # 서브넷이 완전히 준비될 때까지 기다리도록 강제
   depends_on = [
-    azurerm_subnet.consumer_subnet
+    azurerm_subnet.consumer_subnet,
+    azurerm_subnet_nat_gateway_association.consumer_subnet_nat,
+    azurerm_subnet_network_security_group_association.consumer_assoc
   ]
 }
 
