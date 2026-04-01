@@ -13,6 +13,9 @@ function createSslConfig() {
     ''
   ).toLowerCase();
   const sslEnabled = isTruthy(process.env.DB_SSL) || Boolean(sslMode);
+  const rejectUnauthorized = !['false', '0', 'no', 'off'].includes(
+    String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase()
+  );
 
   if (!sslEnabled) {
     return undefined;
@@ -26,14 +29,12 @@ function createSslConfig() {
 
   if (sslMode === 'require') {
     return {
-      rejectUnauthorized: true
+      rejectUnauthorized
     };
   }
 
   return {
-    rejectUnauthorized: !['false', '0', 'no', 'off'].includes(
-      String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase()
-    )
+    rejectUnauthorized
   };
 }
 

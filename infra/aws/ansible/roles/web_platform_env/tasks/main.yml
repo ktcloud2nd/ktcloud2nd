@@ -1,4 +1,22 @@
 ---
+- name: Ensure login namespace exists
+  shell: kubectl create namespace login --dry-run=client -o yaml | kubectl apply -f -
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Ensure user-app namespace exists
+  shell: kubectl create namespace user-app --dry-run=client -o yaml | kubectl apply -f -
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Ensure operator-app namespace exists
+  shell: kubectl create namespace operator-app --dry-run=client -o yaml | kubectl apply -f -
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
 - name: Ensure login namespace backend config exists
   shell: |
     kubectl apply -f - <<EOF
