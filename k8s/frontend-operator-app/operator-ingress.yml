@@ -14,10 +14,10 @@ spec:
     - host: admin.example.com
       http:
         paths:
-          - path: /
+          - path: /home
             pathType: Prefix
             backend:
               service:
-                name: operator-web-service
+                name: operator-app
                 port:
                   number: 80
