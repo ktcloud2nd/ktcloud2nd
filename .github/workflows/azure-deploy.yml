@@ -172,7 +172,21 @@ jobs:
     # Ansible 실행
     - name: Run Ansible Playbook
       if: ${{ github.event.inputs.action == 'apply' }}
+      env:
+        # AWS 자격 증명을 실행 시점에 명시적으로 다시 주입
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
       run: |
+        # AWS 데이터 폴더 초기화 (S3 금고 열기)
+        terraform -chdir=../../aws/terraform/data init -reconfigure \
+          -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+          -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+          -backend-config="region=${{ vars.AWS_REGION }}"
+        
+        # S3에 저장된 output 읽기
+        RDS_ADDR=$(terraform -chdir=../../aws/terraform/data output -json db_endpoint | jq -r .)
+
         BROKER_IP=$(terraform output -json broker_public_ip | jq -r .)
         BROKER_PRIV_IP=$(terraform output -json broker_private_ip | jq -r .)
  
@@ -182,6 +196,8 @@ jobs:
         fi
 
         ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
+          -e "rds_endpoint=${RDS_ADDR}" \
+          -e "aws_region=${{ vars.AWS_REGION }}" \
           -e "dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
           -e "broker_public_ip=${BROKER_IP}" \
           -e "broker_internal_ip=${BROKER_PRIV_IP}" \

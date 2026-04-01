@@ -246,6 +246,8 @@ resource "aws_security_group" "db" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.k3s_nodes.id]
+    # QuickSight -> RDS 연결
+    cidr_blocks = ["13.124.145.32/27"] # IP Whitelist 방식 (추후 VPC Connection 방식으로 변경 예정)
     # cidr_blocks은 Azure에서 추가 (Azure NAT IP 넣어야 함)
   }
 
