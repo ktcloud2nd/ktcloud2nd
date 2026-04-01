@@ -34,6 +34,9 @@ spec:
           image: wooyeol43/operator-backend:latest
           ports:
             - containerPort: 4000
+          envFrom:
+            - secretRef:
+                name: db-secret
           env:
             - name: APP_TARGET
               value: "operator"
