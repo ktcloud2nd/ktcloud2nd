@@ -107,7 +107,7 @@
     spec:
       project: default
       source:
-        repoURL: {{ argocd_repo_url }}
+        repoURL: https://github.com/yjhoo98/ktcloud2nd.git
         targetRevision: aws-web
         path: k8s/frontend-operator-app
         directory:
@@ -126,50 +126,20 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: frontend-login-user ArgoCD Application 생성
+- name: frontend-login ArgoCD Application 생성
   shell: |
     kubectl apply --validate=false -f - <<EOF
     apiVersion: argoproj.io/v1alpha1
     kind: Application
     metadata:
-      name: frontend-login-user
+      name: frontend-login
       namespace: argocd
     spec:
       project: default
       source:
-        repoURL: {{ argocd_repo_url }}
+        repoURL: https://github.com/yjhoo98/ktcloud2nd.git
         targetRevision: aws-web
-        path: k8s/frontend-login-user
-        directory:
-          exclude: '*-secret.yml'
-      destination:
-        server: https://kubernetes.default.svc
-        namespace: login
-      syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
-        syncOptions:
-          - CreateNamespace=true
-    EOF
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  run_once: true
-
-- name: frontend-login-operator ArgoCD Application 생성
-  shell: |
-    kubectl apply --validate=false -f - <<EOF
-    apiVersion: argoproj.io/v1alpha1
-    kind: Application
-    metadata:
-      name: frontend-login-operator
-      namespace: argocd
-    spec:
-      project: default
-      source:
-        repoURL: {{ argocd_repo_url }}
-        targetRevision: aws-web
-        path: k8s/frontend-login-operator
+        path: k8s/frontend-login
         directory:
           exclude: '*-secret.yml'
       destination:
@@ -197,7 +167,7 @@
     spec:
       project: default
       source:
-        repoURL: {{ argocd_repo_url }}
+        repoURL: https://github.com/yjhoo98/ktcloud2nd.git
         targetRevision: aws-web
         path: k8s/frontend-user-app
         directory:
@@ -227,7 +197,7 @@
     spec:
       project: default
       source:
-        repoURL: {{ argocd_repo_url }}
+        repoURL: https://github.com/yjhoo98/ktcloud2nd.git
         targetRevision: aws-web
         path: k8s/backend-login
         directory:
@@ -257,7 +227,7 @@
     spec:
       project: default
       source:
-        repoURL: {{ argocd_repo_url }}
+        repoURL: https://github.com/yjhoo98/ktcloud2nd.git
         targetRevision: aws-web
         path: k8s/backend-user
         directory:
@@ -287,7 +257,7 @@
     spec:
       project: default
       source:
-        repoURL: {{ argocd_repo_url }}
+        repoURL: https://github.com/yjhoo98/ktcloud2nd.git
         targetRevision: aws-web
         path: k8s/backend-operator
         directory:

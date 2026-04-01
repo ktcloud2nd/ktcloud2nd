@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: login-operator-ingress
+  name: login-ingress-user
   namespace: login
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
@@ -9,13 +9,13 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: admin.example.com
+    - host: app.example.com
       http:
         paths:
           - path: /login
             pathType: Prefix
             backend:
               service:
-                name: login-operator
+                name: login
                 port:
                   number: 80

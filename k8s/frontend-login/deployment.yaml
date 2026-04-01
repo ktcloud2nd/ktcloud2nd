@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: login-operator
+  name: login
   namespace: login
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: login-operator
+      app: login
   template:
     metadata:
       labels:
-        app: login-operator
+        app: login
     spec:
       tolerations:
         - key: nodetype
           operator: Equal
-          value: operator
+          value: user
           effect: NoSchedule
       nodeSelector:
-        role: operator-worker
+        role: user-worker
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -27,11 +27,11 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app: login-operator
+                    app: login
                 topologyKey: kubernetes.io/hostname
       containers:
-        - name: login-operator
-          image: wooyeol43/login-frontend-operator:latest
+        - name: login
+          image: wooyeol43/login-frontend:latest
           ports:
             - containerPort: 80
           resources:

@@ -4,7 +4,7 @@ metadata:
   name: operator-app
   namespace: operator-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: operator-app
