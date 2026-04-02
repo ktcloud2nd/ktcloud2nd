@@ -37,6 +37,11 @@ spec:
           envFrom:
             - secretRef:
                 name: db-secret
+                optional: true
+            - configMapRef:
+                name: web-platform-backend-config
+            - secretRef:
+                name: web-platform-backend-secret
           env:
             - name: APP_TARGET
               value: "login"
