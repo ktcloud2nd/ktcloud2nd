@@ -77,6 +77,33 @@ function getWeatherIcon(code, isDay) {
   return '\uD83C\uDF24\uFE0F';
 }
 
+/* ✅ 추가된 함수 (로케이션용) */
+async function getLocationLabel(latitude, longitude) {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+    );
+
+    if (!response.ok) {
+      return 'Seoul';
+    }
+
+    const data = await response.json();
+    const address = data.address || {};
+
+    return (
+      address.suburb ||
+      address.city_district ||
+      address.neighbourhood ||
+      address.town ||
+      address.city ||
+      'Seoul'
+    );
+  } catch {
+    return 'Seoul';
+  }
+}
+
 function UserDashboardPage() {
   const session = getStoredSession();
   const user = session?.user;
@@ -89,15 +116,19 @@ function UserDashboardPage() {
 
     async function loadWeather(latitude, longitude) {
       try {
-        const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day&timezone=auto`
-        );
+        /* ✅ 여기만 수정됨 (Promise.all 추가) */
+        const [weatherResponse, locationLabel] = await Promise.all([
+          fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day&timezone=auto`
+          ),
+          getLocationLabel(latitude, longitude)
+        ]);
 
-        if (!response.ok) {
+        if (!weatherResponse.ok) {
           return;
         }
 
-        const data = await response.json();
+        const data = await weatherResponse.json();
         const current = data.current;
 
         if (!current || cancelled) {
@@ -108,7 +139,7 @@ function UserDashboardPage() {
           temperature: current.temperature_2m.toFixed(1),
           label: WEATHER_LABELS[current.weather_code] || 'Weather',
           icon: getWeatherIcon(current.weather_code, current.is_day === 1),
-          locationLabel: data.timezone_abbreviation || data.timezone || 'Seoul'
+          locationLabel // 👈 timezone 대신 여기로 변경
         });
       } catch {
         if (!cancelled) {
@@ -141,9 +172,7 @@ function UserDashboardPage() {
       role="USER"
       metaContent={weather ? (
         <div className="dashboard-meta-line">
-          <span className="weather-icon-inline">{weather.icon}</span>
-          <span>{weather.temperature}</span>
-          <span>{weather.locationLabel}</span>
+          {`${weather.icon} ${weather.temperature}°C · ${weather.locationLabel}`}
         </div>
       ) : null}
       title={"내 차량 대시보드"}
@@ -171,4 +200,3 @@ function UserDashboardPage() {
 }
 
 export default UserDashboardPage;
-

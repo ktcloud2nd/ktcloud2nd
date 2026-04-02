@@ -8,7 +8,11 @@ function DashboardLayout({ role, userId, title, metaContent = null, description,
   const session = getStoredSession();
 
   const resolvedRole = role || session?.role?.toUpperCase() || 'USER';
-  const resolvedUserId = userId || session?.user?.userId || 'guest';
+  const resolvedUserId =
+    userId ||
+    session?.user?.userName ||
+    session?.user?.userId ||
+    'guest';
 
   const handleTabClick = (path) => {
     if (location.pathname === path) {

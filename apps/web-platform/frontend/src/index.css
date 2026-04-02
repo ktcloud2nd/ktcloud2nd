@@ -310,9 +310,10 @@ a {
   align-items: center;
   gap: 8px;
   margin: 0 0 8px;
-  color: #4f607d;
-  font-size: 15px;
+  color: #52627d;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 1.6;
 }
 
 .dashboard-meta-line .weather-icon-inline {
