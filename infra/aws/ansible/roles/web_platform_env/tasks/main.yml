@@ -62,7 +62,7 @@
     quicksight_allowed_domains_resolved: >-
       {{
         quicksight_allowed_domains
-        | default('https://' ~ (operator_app_host | default('admin.example.com')), true)
+        | default('https://' ~ (operator_app_host | default('admin.example.com', true)), true)
       }}
     grafana_embed_url_resolved: >-
       {{
