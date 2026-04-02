@@ -198,21 +198,20 @@ export async function loadUserDashboard(userId) {
     [account.vehicleId]
   );
 
-  const latest =
-    latestStatsResult.rows[0] || {
-      timestamp: Math.floor(Date.now() / 1000),
-      lat: 37.5665,
-      lon: 126.978,
-      speed: 0,
-      engine_on: false,
-      fuel_level: 0,
-      mode: 3
-    };
+  const latest = latestStatsResult.rows[0] || null;
+  const hasLiveStats = Boolean(latest);
+  const latestCoordinates = latest ? toCoordinatePair(latest) : null;
 
-  const lastUpdated = formatDateTime(latest.timestamp);
-  const coordinates = `${toNumber(latest.lat).toFixed(4)}, ${toNumber(latest.lon).toFixed(4)}`;
-  const online = Date.now() / 1000 - toNumber(latest.timestamp) <= 300;
+  const lastUpdated = latest ? formatDateTime(latest.timestamp) : '-';
+  const coordinates = latestCoordinates
+    ? `${latestCoordinates.lat.toFixed(4)}, ${latestCoordinates.lon.toFixed(4)}`
+    : 'No recent coordinates';
+  const online =
+    hasLiveStats &&
+    Date.now() / 1000 - toNumber(latest.timestamp) <= 300;
   const tripSummary = buildTripSummary(recentStatsResult.rows);
+  const locationStatusLabel = hasLiveStats ? (online ? 'Live' : 'Delayed') : 'No data';
+  const signalStatusLabel = hasLiveStats ? formatTime(latest.timestamp) : '-';
 
   return {
     header: {
@@ -226,42 +225,48 @@ export async function loadUserDashboard(userId) {
         'Vehicle',
       vehicleId: account.vehicleId,
       userName: account.userName || userId,
-      connectionStatus: online ? 'Connected' : 'Signal delayed',
+      connectionStatus: hasLiveStats
+        ? online
+          ? 'Connected'
+          : 'Signal delayed'
+        : 'No data',
       lastUpdated
     },
     mainStatus: {
-      ignition: latest.engine_on ? 'ON' : 'OFF',
-      speed: `${Math.round(toNumber(latest.speed))} km/h`,
-      fuel: `${Math.round(toNumber(latest.fuel_level))}%`,
-      driveMode: MODE_LABELS[toNumber(latest.mode)] || 'Unknown'
+      ignition: latest ? (latest.engine_on ? 'ON' : 'OFF') : 'No data',
+      speed: latest ? `${Math.round(toNumber(latest.speed))} km/h` : '-',
+      fuel: latest ? `${Math.round(toNumber(latest.fuel_level))}%` : '-',
+      driveMode: latest ? MODE_LABELS[toNumber(latest.mode)] || 'Unknown' : 'No data'
     },
     summaryCards: [
       {
         label: 'Speed',
-        value: `${Math.round(toNumber(latest.speed))} km/h`,
+        value: latest ? `${Math.round(toNumber(latest.speed))} km/h` : '-',
         description: 'Current vehicle speed'
       },
       {
         label: 'Fuel',
-        value: `${Math.round(toNumber(latest.fuel_level))}%`,
+        value: latest ? `${Math.round(toNumber(latest.fuel_level))}%` : '-',
         description: 'Remaining fuel level'
       },
       {
         label: 'Location',
-        value: online ? 'Live' : 'Delayed',
+        value: locationStatusLabel,
         description: coordinates
       },
       {
         label: 'Last signal',
-        value: formatTime(latest.timestamp),
+        value: signalStatusLabel,
         description: lastUpdated
       }
     ],
     map: {
       title: 'Vehicle location',
-      status: online ? 'GPS Live' : 'Signal Delayed',
+      status: hasLiveStats ? (online ? 'GPS Live' : 'Signal Delayed') : 'No GPS Data',
       coordinates,
-      address: `Current vehicle coordinates (${coordinates})`
+      address: latestCoordinates
+        ? `Current vehicle coordinates (${coordinates})`
+        : 'No collected vehicle location data is available yet.'
     },
     tripSummary,
     alerts: alertsResult.rows.map((alert) => ({

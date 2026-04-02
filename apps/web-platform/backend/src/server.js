@@ -288,10 +288,26 @@ if (isEnabledForTarget('operator')) {
 if (isEnabledForTarget('user')) {
   app.get('/api/user/dashboard', async (request, response) => {
     const userId = String(request.query.userId || '').trim();
+    const sessionUserId = String(request.header('x-user-id') || '').trim();
+    const sessionRole = String(request.header('x-user-role') || '').trim().toLowerCase();
 
     if (!userId) {
       response.status(400).json({
         message: 'userId query parameter is required.'
+      });
+      return;
+    }
+
+    if (!sessionUserId || sessionRole !== 'user') {
+      response.status(401).json({
+        message: 'Authenticated user context is required.'
+      });
+      return;
+    }
+
+    if (sessionUserId !== userId) {
+      response.status(403).json({
+        message: 'You are not allowed to access another user dashboard.'
       });
       return;
     }
