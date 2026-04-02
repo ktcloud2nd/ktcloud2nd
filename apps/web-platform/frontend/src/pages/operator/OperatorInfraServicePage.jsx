@@ -51,7 +51,7 @@ export default function OperatorInfraServicePage() {
   return (
     <DashboardLayout
       role="OPERATOR"
-      title="Operator Infra Service Dashboard"
+      title="인프라 모니터링 대시보드"
       description=""
       tabs={operatorTabs}
     >

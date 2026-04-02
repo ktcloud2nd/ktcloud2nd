@@ -54,7 +54,7 @@ function OperatorVehiclePage() {
   return (
     <DashboardLayout
       role="OPERATOR"
-      title="Operator Vehicle Dashboard"
+      title="차량 목록 대시보드"
       description=""
       tabs={operatorTabs}
     >
