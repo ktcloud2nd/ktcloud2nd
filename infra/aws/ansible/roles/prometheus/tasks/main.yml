@@ -45,6 +45,19 @@
     mode: "0644"
   run_once: true
 
+- name: Render custom Grafana dashboard values
+  copy:
+    dest: /tmp/kube-prometheus-stack/custom-grafana-dashboard-values.yaml
+    mode: "0644"
+    content: |
+      grafana:
+        dashboards:
+          default:
+            k3s-infra-overview:
+              json: |
+{{ lookup('file', role_path ~ '/files/grafana-dashboards/k3s-infra-overview.json') | indent(16, true) }}
+  run_once: true
+
 - name: Check Grafana deployment status
   shell: kubectl get deployment kube-prometheus-stack-grafana --namespace operator-app 2>/dev/null && echo "exists" || echo "not-found"
   environment:
@@ -89,6 +102,7 @@
     --create-namespace
     --timeout 15m
     --values /tmp/kube-prometheus-stack/kube-prometheus-stack-values.yaml
+    --values /tmp/kube-prometheus-stack/custom-grafana-dashboard-values.yaml
     --set prometheusOperator.admissionWebhooks.enabled=false
     --set prometheusOperator.admissionWebhooks.patch.enabled=false
     --set prometheusOperator.tls.enabled=false
@@ -103,7 +117,6 @@
     --set grafana.env.GF_SECURITY_ALLOW_EMBEDDING=true
     --set grafana.env.GF_AUTH_ANONYMOUS_ENABLED=true
     --set grafana.env.GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-    --set-file grafana.dashboards.default.k3s-infra-overview=/tmp/kube-prometheus-stack/dashboards/k3s-infra-overview.json
     --set grafana.tolerations[0].key=nodetype
     --set grafana.tolerations[0].operator=Equal
     --set grafana.tolerations[0].value=operator
