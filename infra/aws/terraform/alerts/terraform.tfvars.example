@@ -1,8 +1,8 @@
 aws_region = "ap-northeast-2"
 name_prefix = "ktcloud2nd"
 
-network_state_bucket = "8team-terraform-tfstate"
-network_state_key = "network/terraform.tfstate"
+network_state_bucket = "palja-terraform-backend"
+network_state_key = "aws/network/terraform.tfstate"
 network_state_region = "ap-northeast-2"
 network_state_access_key = "REPLACE_ME"
 network_state_secret_key = "REPLACE_ME"
@@ -13,7 +13,7 @@ data_state_region = "ap-northeast-2"
 data_state_access_key = "REPLACE_ME"
 data_state_secret_key = "REPLACE_ME"
 
-db_password = "REPLACE_ME"
+db_password = "temp"
 slack_webhook_url = "https://hooks.slack.com/services/REPLACE/ME"
 
 consumer_name = "slack_anomaly_notifier"

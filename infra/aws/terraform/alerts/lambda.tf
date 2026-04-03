@@ -117,6 +117,7 @@ resource "aws_lambda_function" "notifier" {
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   timeout       = var.lambda_timeout_seconds
   memory_size   = var.lambda_memory_size
+  reserved_concurrent_executions = 1
 
   vpc_config {
     subnet_ids         = data.terraform_remote_state.network.outputs.private_app_subnet_ids

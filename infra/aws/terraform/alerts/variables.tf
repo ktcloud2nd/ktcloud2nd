@@ -13,13 +13,13 @@ variable "name_prefix" {
 variable "network_state_bucket" {
   description = "S3 bucket that stores the network terraform state file."
   type        = string
-  default     = "8team-terraform-tfstate"
+  default     = "palja-terraform-backend"
 }
 
 variable "network_state_key" {
   description = "S3 object key for the network terraform state file."
   type        = string
-  default     = "network/terraform.tfstate"
+  default     = "aws/network/terraform.tfstate"
 }
 
 variable "network_state_region" {
