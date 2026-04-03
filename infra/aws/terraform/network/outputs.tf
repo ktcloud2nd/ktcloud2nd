@@ -50,12 +50,12 @@ output "alb_dns_name" {
 
 output "user_app_host" {
   description = "Public hostname for the user application."
-  value       = var.user_app_host
+  value       = local.user_app_host
 }
 
 output "operator_app_host" {
   description = "Public hostname for the operator application."
-  value       = var.operator_app_host
+  value       = local.operator_app_host
 }
 
 output "alb_sg_id" {

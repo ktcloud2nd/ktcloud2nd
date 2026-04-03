@@ -28,8 +28,6 @@ enable_multi_nat = false
 
 create_public_dns_records = true
 public_hosted_zone_name   = "palja.click"
-user_app_host             = "app.palja.click"
-operator_app_host         = "admin.palja.click"
 
 tags = {
   Environment = "dev"

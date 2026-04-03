@@ -3,6 +3,8 @@ locals {
   private_app_roles                  = ["shared-app-a", "shared-app-c"]
   private_db_roles                   = ["db-a", "db-c"]
   public_hosted_zone_name_normalized = trimsuffix(var.public_hosted_zone_name, ".")
+  user_app_host                      = "app.${local.public_hosted_zone_name_normalized}"
+  operator_app_host                  = "admin.${local.public_hosted_zone_name_normalized}"
 
   private_app_nat_gateway_index = {
     for idx, subnet in var.private_app_subnet_cidrs :
@@ -321,7 +323,7 @@ resource "aws_lb_listener" "http" {
 resource "aws_route53_record" "user_app_alias" {
   count           = var.create_public_dns_records ? 1 : 0
   zone_id         = data.aws_route53_zone.public[0].zone_id
-  name            = var.user_app_host
+  name            = local.user_app_host
   type            = "A"
   allow_overwrite = true
 
@@ -335,7 +337,7 @@ resource "aws_route53_record" "user_app_alias" {
 resource "aws_route53_record" "operator_app_alias" {
   count           = var.create_public_dns_records ? 1 : 0
   zone_id         = data.aws_route53_zone.public[0].zone_id
-  name            = var.operator_app_host
+  name            = local.operator_app_host
   type            = "A"
   allow_overwrite = true
 

@@ -78,18 +78,6 @@ variable "public_hosted_zone_name" {
   default     = "palja.click"
 }
 
-variable "user_app_host" {
-  description = "Public hostname for the user application."
-  type        = string
-  default     = "app.palja.click"
-}
-
-variable "operator_app_host" {
-  description = "Public hostname for the operator application."
-  type        = string
-  default     = "admin.palja.click"
-}
-
 variable "tags" {
   description = "Additional tags applied to all resources."
   type        = map(string)

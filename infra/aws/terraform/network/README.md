@@ -28,4 +28,4 @@ Terraform baseline for the Infra 1 scope.
 2. Align Infra 2 on `SSM Session Manager` as the operations access path
 3. Add ALB listener and target group integration points with Infra 2
 4. Handle WAF only after the ALB baseline is fixed
-5. Confirm `public_hosted_zone_name`, `user_app_host`, and `operator_app_host` match the purchased domain
+5. Confirm `public_hosted_zone_name` is correct because the stack derives `app.<zone>` and `admin.<zone>` automatically
