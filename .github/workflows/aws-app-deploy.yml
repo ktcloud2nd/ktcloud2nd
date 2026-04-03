@@ -6,14 +6,6 @@ name: 'AWS App Image Deploy'
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - web-anomaly
-    paths:
-      - '.github/workflows/aws-app-deploy.yml'
-      - 'apps/web-platform/backend/**'
-      - 'apps/web-platform/frontend/**'
 
 permissions:
   contents: read
