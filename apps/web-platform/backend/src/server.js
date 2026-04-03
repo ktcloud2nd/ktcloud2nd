@@ -189,6 +189,134 @@ function handleQuickSightError(response, error, target) {
   });
 }
 
+function normalizeTimestamp(value) {
+  if (!value) {
+    return null;
+  }
+
+  const numeric = Number(value);
+  return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+}
+
+function toRadians(value) {
+  return (value * Math.PI) / 180;
+}
+
+function calculateDistanceKm(from, to) {
+  if (
+    !Number.isFinite(from?.lat) ||
+    !Number.isFinite(from?.lon) ||
+    !Number.isFinite(to?.lat) ||
+    !Number.isFinite(to?.lon)
+  ) {
+    return 0;
+  }
+
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(to.lat - from.lat);
+  const dLon = toRadians(to.lon - from.lon);
+  const lat1 = toRadians(from.lat);
+  const lat2 = toRadians(to.lat);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function buildUserDashboardPayload(rows) {
+  if (!rows.length) {
+    return null;
+  }
+
+  const latest = rows[0];
+  const chronologicalRows = [...rows].reverse();
+  const validSpeeds = rows
+    .map((row) => Number(row.speed))
+    .filter((value) => Number.isFinite(value));
+  const validFuelLevels = rows
+    .map((row) => Number(row.fuelLevel))
+    .filter((value) => Number.isFinite(value));
+  const validCoords = chronologicalRows.filter(
+    (row) => Number.isFinite(Number(row.lat)) && Number.isFinite(Number(row.lon))
+  );
+
+  let distanceKm = 0;
+
+  for (let index = 1; index < validCoords.length; index += 1) {
+    distanceKm += calculateDistanceKm(
+      {
+        lat: Number(validCoords[index - 1].lat),
+        lon: Number(validCoords[index - 1].lon)
+      },
+      {
+        lat: Number(validCoords[index].lat),
+        lon: Number(validCoords[index].lon)
+      }
+    );
+  }
+
+  const engineOnCount = rows.filter((row) => row.engineOn).length;
+  const latestTimestamp = normalizeTimestamp(latest.timestamp);
+  const oldestTimestamp = normalizeTimestamp(chronologicalRows[0].timestamp);
+  const durationMinutes =
+    latestTimestamp && oldestTimestamp
+      ? Math.max((latestTimestamp - oldestTimestamp) / (1000 * 60), 0)
+      : 0;
+
+  return {
+    vehicleId: latest.vehicleId,
+    latest: {
+      speed: latest.speed,
+      fuelLevel: latest.fuelLevel,
+      engineOn: latest.engineOn,
+      eventType: latest.eventType,
+      mode: latest.mode,
+      lat: latest.lat,
+      lon: latest.lon,
+      timestamp: latestTimestamp
+    },
+    metrics: {
+      latestSpeed: Number(latest.speed || 0),
+      averageSpeed: validSpeeds.length
+        ? validSpeeds.reduce((sum, value) => sum + value, 0) / validSpeeds.length
+        : 0,
+      maxSpeed: validSpeeds.length ? Math.max(...validSpeeds) : 0,
+      fuelLevel: Number(latest.fuelLevel || 0),
+      distanceKm,
+      engineOnRatio: rows.length ? (engineOnCount / rows.length) * 100 : 0,
+      sampleCount: rows.length,
+      durationMinutes
+    },
+    series: {
+      speed: chronologicalRows.map((row) => ({
+        timestamp: normalizeTimestamp(row.timestamp),
+        value: Number(row.speed || 0)
+      })),
+      fuelLevel: chronologicalRows.map((row) => ({
+        timestamp: normalizeTimestamp(row.timestamp),
+        value: Number(row.fuelLevel || 0)
+      }))
+    },
+    route: validCoords.map((row) => ({
+      lat: Number(row.lat),
+      lon: Number(row.lon)
+    })),
+    recentRecords: rows.slice(0, 8).map((row) => ({
+      timestamp: normalizeTimestamp(row.timestamp),
+      speed: Number(row.speed || 0),
+      fuelLevel: Number(row.fuelLevel || 0),
+      engineOn: row.engineOn,
+      eventType: row.eventType,
+      mode: row.mode
+    })),
+    fuelRange: {
+      min: validFuelLevels.length ? Math.min(...validFuelLevels) : 0,
+      max: validFuelLevels.length ? Math.max(...validFuelLevels) : 0
+    }
+  };
+}
+
 app.get('/api/health', async (_request, response) => {
   const result = await query('SELECT NOW() AS now');
   response.json({ ok: true, now: result.rows[0].now, appTarget });
@@ -377,6 +505,50 @@ if (isEnabledForTarget('login', 'user', 'operator')) {
         passwordHash: undefined
       }
     });
+  });
+}
+
+if (isEnabledForTarget('login', 'user')) {
+  app.get('/api/user/dashboard', async (request, response) => {
+    const vehicleId = String(request.query.vehicleId || '').trim();
+
+    if (!vehicleId) {
+      response.status(400).json({
+        message: 'vehicleId is required.'
+      });
+      return;
+    }
+
+    try {
+      const result = await query(
+        `
+          SELECT
+            vehicle_id AS "vehicleId",
+            timestamp,
+            lat,
+            lon,
+            speed,
+            engine_on AS "engineOn",
+            fuel_level AS "fuelLevel",
+            event_type AS "eventType",
+            mode
+          FROM vehicle_stats
+          WHERE vehicle_id = $1
+          ORDER BY timestamp DESC
+          LIMIT 60
+        `,
+        [vehicleId]
+      );
+
+      response.json({
+        dashboard: buildUserDashboardPayload(result.rows)
+      });
+    } catch (error) {
+      response.status(500).json({
+        message: 'Failed to load the user vehicle dashboard.',
+        details: error.message
+      });
+    }
   });
 }
 

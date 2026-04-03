@@ -93,3 +93,15 @@ CREATE TABLE IF NOT EXISTS vehicle_anomaly_alerts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_anomaly_type ON vehicle_anomaly_alerts(anomaly_type);
+
+-- 알람 체크포인트 저장 테이블 (마지막 id 저장 용도)
+CREATE TABLE IF NOT EXISTS alert_delivery_state (
+  consumer_name VARCHAR(100) PRIMARY KEY,
+  last_sent_id BIGINT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 최초 상태 row 생성
+INSERT INTO alert_delivery_state (consumer_name, last_sent_id)
+VALUES ('slack_anomaly_notifier', 0)
+ON CONFLICT (consumer_name) DO NOTHING;

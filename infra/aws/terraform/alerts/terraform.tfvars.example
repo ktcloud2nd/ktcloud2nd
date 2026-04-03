@@ -1,0 +1,32 @@
+aws_region = "ap-northeast-2"
+name_prefix = "ktcloud2nd"
+
+network_state_bucket = "palja-terraform-backend"
+network_state_key = "aws/network/terraform.tfstate"
+network_state_region = "ap-northeast-2"
+network_state_access_key = "REPLACE_ME"
+network_state_secret_key = "REPLACE_ME"
+
+data_state_bucket = "palja-terraform-backend"
+data_state_key = "aws/data/terraform.tfstate"
+data_state_region = "ap-northeast-2"
+data_state_access_key = "REPLACE_ME"
+data_state_secret_key = "REPLACE_ME"
+
+db_password = "temp"
+slack_webhook_url = "https://hooks.slack.com/services/REPLACE/ME"
+
+consumer_name = "slack_anomaly_notifier"
+schedule_expression = "rate(1 minute)"
+lambda_timeout_seconds = 60
+lambda_memory_size = 256
+log_retention_in_days = 14
+
+db_ssl_enabled = true
+db_ssl_reject_unauthorized = false
+
+tags = {
+  Environment = "dev"
+  Owner       = "infra3"
+  Service     = "alerts"
+}

@@ -26,6 +26,8 @@ env:
   TF_VERSION: "1.8.5"
   TF_VAR_network_state_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
   TF_VAR_network_state_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  TF_VAR_data_state_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  TF_VAR_data_state_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   ARGOCD_REPO_URL: https://github.com/ktcloud2nd/ktcloud2nd.git
 
 jobs:
@@ -69,6 +71,18 @@ jobs:
           cp terraform.tfvars.example terraform.tfvars
           sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
 
+      - name: Prepare alerts tfvars from example
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        shell: bash
+        run: |
+          cp terraform.tfvars.example terraform.tfvars
+          sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
+          sed -i 's|^slack_webhook_url *=.*|slack_webhook_url = "${{ secrets.SLACK_WEBHOOK_URL }}"|' terraform.tfvars
+
+      - name: Install notifier Lambda dependencies
+        working-directory: ${{ github.workspace }}/infra/aws/lambda/slack-anomaly-notifier
+        run: npm ci
+
       - name: Network Init
         working-directory: ${{ github.workspace }}/infra/aws/terraform/network
         run: >-
@@ -110,6 +124,40 @@ jobs:
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
         run: terraform validate
 
+      - name: Check alerts data remote state
+        id: alerts-data-state
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        shell: bash
+        run: |
+          if aws s3api head-object --bucket palja-terraform-backend --key aws/data/terraform.tfstate >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Alerts Init
+        if: steps.alerts-data-state.outputs.exists == 'true'
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: >-
+          terraform init -input=false -reconfigure
+          -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}"
+          -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+
+      - name: Alerts Validate
+        if: steps.alerts-data-state.outputs.exists == 'true'
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: terraform validate
+
+      - name: Alerts Plan
+        if: steps.alerts-data-state.outputs.exists == 'true'
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Show Alerts Plan
+        if: steps.alerts-data-state.outputs.exists == 'true'
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: terraform show -no-color tfplan
+
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
@@ -146,6 +194,18 @@ jobs:
         run: |
           cp terraform.tfvars.example terraform.tfvars
           sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
+
+      - name: Prepare alerts tfvars from example
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        shell: bash
+        run: |
+          cp terraform.tfvars.example terraform.tfvars
+          sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
+          sed -i 's|^slack_webhook_url *=.*|slack_webhook_url = "${{ secrets.SLACK_WEBHOOK_URL }}"|' terraform.tfvars
+
+      - name: Install notifier Lambda dependencies
+        working-directory: ${{ github.workspace }}/infra/aws/lambda/slack-anomaly-notifier
+        run: npm ci
 
       - name: Network Init
         working-directory: ${{ github.workspace }}/infra/aws/terraform/network
@@ -195,6 +255,17 @@ jobs:
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
         run: terraform apply -input=false -auto-approve
 
+      - name: Alerts Init
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: >-
+          terraform init -input=false -reconfigure
+          -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}"
+          -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+
+      - name: Alerts Apply
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: terraform apply -input=false -auto-approve
+
   terraform-destroy:
     name: Terraform Destroy
     runs-on: ubuntu-latest
@@ -233,6 +304,34 @@ jobs:
         run: |
           cp terraform.tfvars.example terraform.tfvars
           sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
+
+      - name: Prepare alerts tfvars from example
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        shell: bash
+        run: |
+          cp terraform.tfvars.example terraform.tfvars
+          sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
+          sed -i 's|^slack_webhook_url *=.*|slack_webhook_url = "${{ secrets.SLACK_WEBHOOK_URL }}"|' terraform.tfvars
+
+      - name: Install notifier Lambda dependencies
+        working-directory: ${{ github.workspace }}/infra/aws/lambda/slack-anomaly-notifier
+        run: npm ci
+
+      - name: Alerts Init
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: >-
+          terraform init -input=false -reconfigure
+          -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}"
+          -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+
+      - name: Alerts Refresh State
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        continue-on-error: true
+        run: terraform apply -refresh-only -auto-approve -input=false
+
+      - name: Alerts Destroy
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        run: terraform destroy -input=false -auto-approve
 
       - name: Data Init
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
