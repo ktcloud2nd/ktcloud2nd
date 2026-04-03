@@ -124,7 +124,19 @@ jobs:
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
         run: terraform validate
 
+      - name: Check alerts data remote state
+        id: alerts-data-state
+        working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
+        shell: bash
+        run: |
+          if aws s3api head-object --bucket palja-terraform-backend --key aws/data/terraform.tfstate >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Alerts Init
+        if: steps.alerts-data-state.outputs.exists == 'true'
         working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
         run: >-
           terraform init -input=false -reconfigure
@@ -132,14 +144,17 @@ jobs:
           -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
       - name: Alerts Validate
+        if: steps.alerts-data-state.outputs.exists == 'true'
         working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
         run: terraform validate
 
       - name: Alerts Plan
+        if: steps.alerts-data-state.outputs.exists == 'true'
         working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
         run: terraform plan -input=false -out=tfplan
 
       - name: Show Alerts Plan
+        if: steps.alerts-data-state.outputs.exists == 'true'
         working-directory: ${{ github.workspace }}/infra/aws/terraform/alerts
         run: terraform show -no-color tfplan
 

@@ -50,6 +50,22 @@ resource "aws_security_group" "lambda" {
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow DNS UDP egress for name resolution."
+  }
+
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow DNS TCP egress for name resolution fallback."
+  }
+
+  egress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
